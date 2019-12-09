@@ -1,6 +1,6 @@
 /*
- * Copyright 2010-2018 JetBrains s.r.o. Use of this source code is governed by the Apache 2.0 license
- * that can be found in the license/LICENSE.txt file.
+ * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
 package org.jetbrains.kotlin.idea.formatter
@@ -13,24 +13,18 @@ import com.intellij.psi.impl.source.codeStyle.SemanticEditorPosition
 import com.intellij.psi.impl.source.codeStyle.lineIndent.FormatterBasedLineIndentProvider
 import com.intellij.psi.impl.source.codeStyle.lineIndent.JavaLikeLangLineIndentProvider
 import com.intellij.psi.tree.IElementType
-import com.intellij.util.containers.HashMap
 import org.apache.log4j.Logger
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.lexer.KtTokens
 import kotlin.math.max
 import kotlin.math.min
 
-/**
- * @author Alefas
- */
 class KotlinLineIndentProvider : JavaLikeLangLineIndentProvider() {
     private val formatterBasedProvider = FormatterBasedLineIndentProvider()
 
     private val LOG = Logger.getLogger(this.javaClass)
 
-    override fun isSuitableForLanguage(language: Language): Boolean {
-        return language.isKindOf(KotlinLanguage.INSTANCE)
-    }
+    override fun isSuitableForLanguage(language: Language): Boolean = language.isKindOf(KotlinLanguage.INSTANCE)
 
     @Suppress("SuspiciousEqualsCombination")
     override fun getLineIndent(project: Project, editor: Editor, language: Language?, offset: Int): String? {
@@ -39,7 +33,7 @@ class KotlinLineIndentProvider : JavaLikeLangLineIndentProvider() {
 
         if (result !== LineIndentProvider.DO_NOT_ADJUST && result != null && result != formatterBasedResult) {
             val message = "Java-like indent is not equals to formatter based indent text:\n${
-                editor.document.text.substring(max(offset - 30, 0), min(offset + 30, editor.document.textLength))
+            editor.document.text.substring(max(offset - 30, 0), min(offset + 30, editor.document.textLength))
             }"
             LOG.error(message, Throwable(message))
         } else if (result === LineIndentProvider.DO_NOT_ADJUST || result == null) {
@@ -49,33 +43,28 @@ class KotlinLineIndentProvider : JavaLikeLangLineIndentProvider() {
         return formatterBasedResult
     }
 
-    override fun mapType(tokenType: IElementType): SemanticEditorPosition.SyntaxElement? {
-        return SYNTAX_MAP[tokenType]
-    }
+    override fun mapType(tokenType: IElementType): SemanticEditorPosition.SyntaxElement? = SYNTAX_MAP[tokenType]
 
     companion object {
-        private val SYNTAX_MAP = HashMap<IElementType, SemanticEditorPosition.SyntaxElement>()
-
-        init {
-            SYNTAX_MAP[KtTokens.WHITE_SPACE] = JavaLikeElement.Whitespace
-            SYNTAX_MAP[KtTokens.SEMICOLON] = JavaLikeElement.Semicolon
-            SYNTAX_MAP[KtTokens.LBRACE] = JavaLikeElement.BlockOpeningBrace
-            SYNTAX_MAP[KtTokens.RBRACE] = JavaLikeElement.BlockClosingBrace
-            SYNTAX_MAP[KtTokens.LBRACKET] = JavaLikeElement.ArrayOpeningBracket
-            SYNTAX_MAP[KtTokens.RBRACKET] = JavaLikeElement.ArrayClosingBracket
-            SYNTAX_MAP[KtTokens.RPAR] = JavaLikeElement.RightParenthesis
-            SYNTAX_MAP[KtTokens.LPAR] = JavaLikeElement.LeftParenthesis
-            SYNTAX_MAP[KtTokens.COLON] = JavaLikeElement.Colon
-            SYNTAX_MAP[KtTokens.ELSE_KEYWORD] = JavaLikeElement.ElseKeyword
-            SYNTAX_MAP[KtTokens.IF_KEYWORD] = JavaLikeElement.IfKeyword
-            SYNTAX_MAP[KtTokens.FOR_KEYWORD] = JavaLikeElement.ForKeyword
-            SYNTAX_MAP[KtTokens.TRY_KEYWORD] = JavaLikeElement.TryKeyword
-            SYNTAX_MAP[KtTokens.DO_KEYWORD] = JavaLikeElement.DoKeyword
-            SYNTAX_MAP[KtTokens.BLOCK_COMMENT] = JavaLikeElement.BlockComment
-            SYNTAX_MAP[KtTokens.DOC_COMMENT] = JavaLikeElement.BlockComment
-            SYNTAX_MAP[KtTokens.EOL_COMMENT] = JavaLikeElement.LineComment
-            SYNTAX_MAP[KtTokens.COMMA] = JavaLikeElement.Comma
-        }
-
+        private val SYNTAX_MAP = linkedMapOf(
+            KtTokens.WHITE_SPACE to JavaLikeElement.Whitespace,
+            KtTokens.SEMICOLON to JavaLikeElement.Semicolon,
+            KtTokens.LBRACE to JavaLikeElement.BlockOpeningBrace,
+            KtTokens.RBRACE to JavaLikeElement.BlockClosingBrace,
+            KtTokens.LBRACKET to JavaLikeElement.ArrayOpeningBracket,
+            KtTokens.RBRACKET to JavaLikeElement.ArrayClosingBracket,
+            KtTokens.RPAR to JavaLikeElement.RightParenthesis,
+            KtTokens.LPAR to JavaLikeElement.LeftParenthesis,
+            KtTokens.COLON to JavaLikeElement.Colon,
+            KtTokens.ELSE_KEYWORD to JavaLikeElement.ElseKeyword,
+            KtTokens.IF_KEYWORD to JavaLikeElement.IfKeyword,
+            KtTokens.FOR_KEYWORD to JavaLikeElement.ForKeyword,
+            KtTokens.TRY_KEYWORD to JavaLikeElement.TryKeyword,
+            KtTokens.DO_KEYWORD to JavaLikeElement.DoKeyword,
+            KtTokens.BLOCK_COMMENT to JavaLikeElement.BlockComment,
+            KtTokens.DOC_COMMENT to JavaLikeElement.BlockComment,
+            KtTokens.EOL_COMMENT to JavaLikeElement.LineComment,
+            KtTokens.COMMA to JavaLikeElement.Comma
+        )
     }
 }
