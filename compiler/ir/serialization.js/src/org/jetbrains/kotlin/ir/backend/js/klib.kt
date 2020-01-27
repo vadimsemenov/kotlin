@@ -13,6 +13,7 @@ import org.jetbrains.kotlin.analyzer.AnalysisResult
 import org.jetbrains.kotlin.backend.common.LoggingContext
 import org.jetbrains.kotlin.backend.common.extensions.IrGenerationExtension
 import org.jetbrains.kotlin.backend.common.extensions.IrPluginContext
+import org.jetbrains.kotlin.backend.common.ir.ir2stringWhole
 import org.jetbrains.kotlin.backend.common.serialization.DeserializationStrategy
 import org.jetbrains.kotlin.backend.common.serialization.KlibIrVersion
 import org.jetbrains.kotlin.backend.common.serialization.knownBuiltins
@@ -22,12 +23,14 @@ import org.jetbrains.kotlin.backend.common.serialization.metadata.DynamicTypeDes
 import org.jetbrains.kotlin.backend.common.serialization.metadata.KlibMetadataVersion
 import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureDescriptor
 import org.jetbrains.kotlin.builtins.KotlinBuiltIns
+import org.jetbrains.kotlin.builtins.functions.FunctionClassDescriptor
 import org.jetbrains.kotlin.config.*
 import org.jetbrains.kotlin.descriptors.DeclarationDescriptor
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.descriptors.impl.ModuleDescriptorImpl
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.ir.*
 import org.jetbrains.kotlin.ir.backend.js.lower.serialization.metadata.KlibMetadataIncrementalSerializer
+import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.declarations.IrModuleFragment
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
@@ -40,6 +43,7 @@ import org.jetbrains.kotlin.konan.util.KlibMetadataFactories
 import org.jetbrains.kotlin.library.*
 import org.jetbrains.kotlin.library.impl.BuiltInsPlatform
 import org.jetbrains.kotlin.library.impl.buildKoltinLibrary
+import org.jetbrains.kotlin.library.impl.createKotlinLibraryComponents
 import org.jetbrains.kotlin.library.resolver.KotlinLibraryResolveResult
 import org.jetbrains.kotlin.library.resolver.TopologicalLibraryOrder
 import org.jetbrains.kotlin.metadata.ProtoBuf
@@ -85,6 +89,10 @@ private val CompilerConfiguration.metadataVersion
 
 private val CompilerConfiguration.klibMpp: Boolean
     get() = get(CommonConfigurationKeys.KLIB_MPP) ?: false
+
+private val CompilerConfiguration.calculateFakeOverrides: Boolean
+    get() = get(CommonConfigurationKeys.CALCULATE_FAKE_OVERRIDES) ?: false
+
 
 class KotlinFileSerializedData(val metadata: ByteArray, val irData: SerializedIrFile)
 
@@ -135,7 +143,7 @@ fun generateKLib(
     val expectDescriptorToSymbol = mutableMapOf<DeclarationDescriptor, IrSymbol>()
 
     val moduleFragment = psi2IrContext.generateModuleFragmentWithPlugins(project, files,
-        deserializer = null, expectDescriptorToSymbol = expectDescriptorToSymbol)
+        deserializer = null, expectDescriptorToSymbol = expectDescriptorToSymbol, withStubGenerator = true)
 
     moduleFragment.acceptVoid(ManglerChecker(JsManglerIr, Ir2DescriptorManglerAdapter(JsManglerDesc)))
 
@@ -192,7 +200,7 @@ fun loadIr(
             val irBuiltIns = psi2IrContext.irBuiltIns
             val symbolTable = psi2IrContext.symbolTable
 
-            val deserializer = JsIrLinker(emptyLoggingContext, irBuiltIns, symbolTable)
+            val deserializer = JsIrLinker(emptyLoggingContext, irBuiltIns, symbolTable, configuration.calculateFakeOverrides)
 
             val deserializedModuleFragments = sortDependencies(allDependencies.getFullList(), depsDescriptors.descriptors).map {
                 deserializer.deserializeIrModuleHeader(depsDescriptors.getModuleDescriptor(it))!!
@@ -223,7 +231,7 @@ fun loadIr(
             typeTranslator.constantValueGenerator = constantValueGenerator
             constantValueGenerator.typeTranslator = typeTranslator
             val irBuiltIns = IrBuiltIns(moduleDescriptor.builtIns, typeTranslator, signaturer, symbolTable)
-            val deserializer = JsIrLinker(emptyLoggingContext, irBuiltIns, symbolTable)
+            val deserializer = JsIrLinker(emptyLoggingContext, irBuiltIns, symbolTable, configuration.calculateFakeOverrides)
 
             val deserializedModuleFragments = sortDependencies(allDependencies.getFullList(), depsDescriptors.descriptors).map {
                 val strategy =
@@ -265,9 +273,13 @@ fun GeneratorContext.generateModuleFragmentWithPlugins(
     project: Project,
     files: List<KtFile>,
     deserializer: IrDeserializer? = null,
-    expectDescriptorToSymbol: MutableMap<DeclarationDescriptor, IrSymbol>? = null
+    expectDescriptorToSymbol: MutableMap<DeclarationDescriptor, IrSymbol>? = null,
+    withStubGenerator: Boolean = false
 ): IrModuleFragment {
-    val irProviders = generateTypicalIrProviderList(moduleDescriptor, irBuiltIns, symbolTable, deserializer)
+    val irProviders = if (withStubGenerator)
+        generateTypicalIrProviderList(moduleDescriptor, irBuiltIns, symbolTable, deserializer)
+    else
+        generateTypicalIrProviderList2(moduleDescriptor, irBuiltIns, symbolTable, deserializer)
     val signaturer = IdSignatureDescriptor(JsManglerDesc)
     val psi2Ir = Psi2IrTranslator(languageVersionSettings, configuration, signaturer)
 
@@ -298,7 +310,7 @@ fun GeneratorContext.generateModuleFragmentWithPlugins(
 }
 
 fun GeneratorContext.generateModuleFragment(files: List<KtFile>, deserializer: IrDeserializer? = null, expectDescriptorToSymbol: MutableMap<DeclarationDescriptor, IrSymbol>? = null): IrModuleFragment {
-    val irProviders = generateTypicalIrProviderList(moduleDescriptor, irBuiltIns, symbolTable, deserializer)
+    val irProviders = generateTypicalIrProviderList2(moduleDescriptor, irBuiltIns, symbolTable, deserializer)
     val mangler = JsManglerDesc
     val signaturer = IdSignatureDescriptor(mangler)
     return Psi2IrTranslator(

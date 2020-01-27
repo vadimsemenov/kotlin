@@ -16,9 +16,11 @@
 
 package org.jetbrains.kotlin.ir.util
 
+import org.jetbrains.kotlin.builtins.functions.FunctionClassDescriptor
 import org.jetbrains.kotlin.descriptors.ModuleDescriptor
 import org.jetbrains.kotlin.ir.declarations.IrDeclaration
 import org.jetbrains.kotlin.ir.descriptors.IrBuiltIns
+import org.jetbrains.kotlin.ir.descriptors.WrappedDeclarationDescriptor
 import org.jetbrains.kotlin.ir.symbols.IrSymbol
 import org.jetbrains.kotlin.utils.addToStdlib.firstNotNullResult
 
@@ -28,29 +30,35 @@ class ExternalDependenciesGenerator(val symbolTable: SymbolTable, private val ir
         irProviders.singleOrNull { it is DeclarationStubGenerator }?.let {
             (it as DeclarationStubGenerator).unboundSymbolGeneration = true
         }
+        irProviders.firstOrNull{ it is StubIrProvider }?.let {
+            (it as StubIrProvider).declarationStubGenerator.unboundSymbolGeneration = true
+        }
         /*
             Deserializing a reference may lead to new unbound references, so we loop until none are left.
          */
         require(symbolTable.unboundTypeParameters.isEmpty()) { "Unbound type parameters are forbidden" }
 
         lateinit var unbound: List<IrSymbol>
+        var combinedHash: Int = -1
         do {
+            val prevHash = combinedHash
             unbound = symbolTable.allUnbound
+            combinedHash = if (unbound.isEmpty()) 0 else unbound.map { it.hashCode() }.reduce{ x,y -> x xor y }
 
             for (symbol in unbound) {
                 // Symbol could get bound as a side effect of deserializing other symbols.
                 if (!symbol.isBound) {
                     irProviders.getDeclaration(symbol)
                 }
-                assert(symbol.isBound) { "$symbol unbound even after deserialization attempt" }
+                //assert(symbol.isBound) { "$symbol unbound even after deserialization attempt" }
             }
-        } while (unbound.isNotEmpty())
+        } while (/*unbound.isNotEmpty()*/ prevHash != combinedHash)
 
         irProviders.forEach { (it as? IrDeserializer)?.declareForwardDeclarations() }
     }
 }
 
-private val SymbolTable.allUnbound: List<IrSymbol>
+val SymbolTable.allUnbound: List<IrSymbol>
     get() {
         val r = mutableListOf<IrSymbol>()
         r.addAll(unboundClasses)
@@ -63,10 +71,10 @@ private val SymbolTable.allUnbound: List<IrSymbol>
         return r
     }
 
-fun List<IrProvider>.getDeclaration(symbol: IrSymbol): IrDeclaration =
+fun List<IrProvider>.getDeclaration(symbol: IrSymbol): IrDeclaration? =
     firstNotNullResult { provider ->
         provider.getDeclaration(symbol)
-    } ?: error("Could not find declaration for unbound symbol $symbol")
+    } //?: error("Could not find declaration for unbound symbol $symbol")
 
 // In most cases, IrProviders list consist of an optional deserializer and a DeclarationStubGenerator.
 fun generateTypicalIrProviderList(
@@ -80,6 +88,40 @@ fun generateTypicalIrProviderList(
         moduleDescriptor, symbolTable, irBuiltins.languageVersionSettings, extensions
     )
     return listOfNotNull(deserializer, stubGenerator).also {
+        stubGenerator.setIrProviders(it)
+    }
+}
+
+abstract class StubIrProvider (
+    val declarationStubGenerator: DeclarationStubGenerator,
+) : IrProvider {
+
+    abstract fun applicable(symbol: IrSymbol): Boolean
+    override fun getDeclaration(symbol: IrSymbol): IrDeclaration? = when {
+        symbol.isBound -> symbol.owner as IrDeclaration
+        applicable(symbol) -> declarationStubGenerator.getDeclaration(symbol)
+        else -> null
+    }
+}
+
+class IrProviderForFunctionInterfaces(declarationStubGenerator: DeclarationStubGenerator) : StubIrProvider(declarationStubGenerator) {
+    override fun applicable(symbol: IrSymbol): Boolean =
+        symbol.descriptor is FunctionClassDescriptor ||
+        symbol.descriptor !is WrappedDeclarationDescriptor<*> && symbol.descriptor.containingDeclaration is FunctionClassDescriptor
+}
+
+// In most cases, IrProviders list consist of an optional deserializer and a DeclarationStubGenerator.
+fun generateTypicalIrProviderList2( // TODO: don't push me.
+    moduleDescriptor: ModuleDescriptor,
+    irBuiltins: IrBuiltIns,
+    symbolTable: SymbolTable,
+    deserializer: IrDeserializer? = null,
+    extensions: StubGeneratorExtensions = StubGeneratorExtensions.EMPTY
+): List<IrProvider> {
+    val stubGenerator = DeclarationStubGenerator(
+        moduleDescriptor, symbolTable, irBuiltins.languageVersionSettings, extensions
+    )
+    return listOfNotNull(deserializer, IrProviderForFunctionInterfaces(stubGenerator)).also {
         stubGenerator.setIrProviders(it)
     }
 }

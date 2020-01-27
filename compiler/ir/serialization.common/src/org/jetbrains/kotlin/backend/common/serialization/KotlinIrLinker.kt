@@ -6,7 +6,9 @@
 package org.jetbrains.kotlin.backend.common.serialization
 
 import org.jetbrains.kotlin.backend.common.LoggingContext
+import org.jetbrains.kotlin.backend.common.ir.ir2string
 import org.jetbrains.kotlin.backend.common.serialization.encodings.BinarySymbolData
+import org.jetbrains.kotlin.backend.common.serialization.signature.IdSignatureSerializer
 import org.jetbrains.kotlin.builtins.functions.FunctionClassDescriptor
 import org.jetbrains.kotlin.descriptors.*
 import org.jetbrains.kotlin.descriptors.impl.EmptyPackageFragmentDescriptor
@@ -25,26 +27,30 @@ import org.jetbrains.kotlin.ir.symbols.*
 import org.jetbrains.kotlin.ir.symbols.impl.*
 import org.jetbrains.kotlin.ir.types.IrType
 import org.jetbrains.kotlin.ir.types.impl.IrErrorTypeImpl
-import org.jetbrains.kotlin.ir.util.*
+import org.jetbrains.kotlin.ir.util.IdSignature
+import org.jetbrains.kotlin.ir.util.IrDeserializer
+import org.jetbrains.kotlin.ir.util.NaiveSourceBasedFileEntryImpl
+import org.jetbrains.kotlin.ir.util.SymbolTable
 import org.jetbrains.kotlin.protobuf.ExtensionRegistryLite.newInstance
 import org.jetbrains.kotlin.resolve.descriptorUtil.module
 import org.jetbrains.kotlin.resolve.scopes.DescriptorKindFilter
 import org.jetbrains.kotlin.types.Variance
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrDeclaration as ProtoDeclaration
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrFile as ProtoFile
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrType as ProtoType
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrStatement as ProtoStatement
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrExpression as ProtoExpression
-import org.jetbrains.kotlin.backend.common.serialization.proto.IrConstructorCall as ProtoConstructorCall
 import org.jetbrains.kotlin.backend.common.serialization.proto.Actual as ProtoActual
 import org.jetbrains.kotlin.backend.common.serialization.proto.IdSignature as ProtoIdSignature
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrConstructorCall as ProtoConstructorCall
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrDeclaration as ProtoDeclaration
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrExpression as ProtoExpression
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrFile as ProtoFile
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrStatement as ProtoStatement
+import org.jetbrains.kotlin.backend.common.serialization.proto.IrType as ProtoType
 
 abstract class KotlinIrLinker(
     val logger: LoggingContext,
     val builtIns: IrBuiltIns,
     val symbolTable: SymbolTable,
     private val exportedDependencies: List<ModuleDescriptor>,
-    private val forwardModuleDescriptor: ModuleDescriptor?
+    private val forwardModuleDescriptor: ModuleDescriptor?,
+    private val calculateFakeOverrides: Boolean
 ) : IrDeserializer {
 
     private val expectUniqIdToActualUniqId = mutableMapOf<IdSignature, IdSignature>()
@@ -116,6 +122,7 @@ abstract class KotlinIrLinker(
 
     protected val globalDeserializationState = DeserializationState.SimpleDeserializationState { true }
     private val modulesWithReachableTopLevels = mutableSetOf<IrModuleDeserializer>()
+    private val haveSeen = mutableSetOf<IrSymbol>()
 
     //TODO: This is Native specific. Eliminate me.
     private val forwardDeclarations = mutableSetOf<IrSymbol>()
@@ -143,8 +150,9 @@ abstract class KotlinIrLinker(
             private var annotations: List<ProtoConstructorCall>?,
             private val actuals: List<ProtoActual>,
             private val fileIndex: Int,
-            onlyHeaders: Boolean
-        ) : IrFileDeserializer(logger, builtIns, symbolTable) {
+            onlyHeaders: Boolean,
+            calculateFakeOverrides: Boolean
+        ) : IrFileDeserializer(logger, builtIns, symbolTable, calculateFakeOverrides) {
 
             private var fileLoops = mutableMapOf<Int, IrLoopBase>()
 
@@ -342,6 +350,8 @@ abstract class KotlinIrLinker(
                         if (expectUniqIdToActualUniqId[idSignature] != null) wrapInDelegatedSymbol(it) else it
                     }
 
+                    haveSeen.add(symbol)
+
                     if (idSignature in expectUniqIdToActualUniqId.keys) expectSymbols[idSignature] = symbol
                     if (idSignature in expectUniqIdToActualUniqId.values) actualSymbols[idSignature] = symbol
 
@@ -351,6 +361,7 @@ abstract class KotlinIrLinker(
                     symbol.descriptor !is WrappedDeclarationDescriptor<*> &&
                     symbol.descriptor.module.isForwardDeclarationModule
                 ) {
+                    println("FORWARD ADD ${(symbol as IrClassPublicSymbolImpl).signature}")
                     forwardDeclarations.add(symbol)
                 }
 
@@ -435,8 +446,8 @@ abstract class KotlinIrLinker(
             val fileEntry = NaiveSourceBasedFileEntryImpl(fileName, fileProto.fileEntry.lineStartOffsetsList.toIntArray())
 
             val fileDeserializer =
-                IrDeserializerForFile(fileProto.annotationList, fileProto.actualsList, fileIndex, !strategy.needBodies).apply {
-
+                // TODO: make fake overrides parts of strategy.
+                IrDeserializerForFile(fileProto.annotationList, fileProto.actualsList, fileIndex, !strategy.needBodies, calculateFakeOverrides).apply {
                     // Explicitly exported declarations (e.g. top-level initializers) must be deserialized before all other declarations.
                     // Thus we schedule their deserialization in deserializer's constructor.
                     fileProto.explicitlyExportedToCompilerList.forEach {
@@ -645,11 +656,18 @@ abstract class KotlinIrLinker(
         }
 
         val topLevelSignature = signature.topLevelSignature()
+
+        if (haveSeen.contains(symbol)) {
+            return null
+        }
+        haveSeen.add(symbol)
+
         val moduleDeserializer = resolveModuleDeserializer(descriptor.module) ?: return null
 
         moduleDeserializer.addModuleReachableTopLevel(topLevelSignature)
 
         deserializeAllReachableTopLevels()
+
         return descriptor
     }
 
@@ -665,9 +683,11 @@ abstract class KotlinIrLinker(
         if (!symbol.isBound && (symbol.descriptor.isExpectMember || symbol.descriptor.containingDeclaration?.isExpectMember == true))
             return null
 
-        assert(symbol.isBound) {
-            "getDeclaration: symbol $symbol is unbound, descriptor = ${symbol.descriptor}, signature = ${symbol.signature}"
-        }
+        if (!symbol.isBound) return null
+
+        //assert(symbol.isBound) {
+        //    "getDeclaration: symbol $symbol is unbound, descriptor = ${symbol.descriptor}, signature = ${symbol.signature}"
+        //}
 
         return symbol.owner as IrDeclaration
     }
@@ -783,6 +803,7 @@ abstract class KotlinIrLinker(
         return deserializersForModules.values.flatMap { it.module.files }
     }
 }
+
 
 enum class DeserializationStrategy(val needBodies: Boolean, val explicitlyExported: Boolean, val theWholeWorld: Boolean) {
     ONLY_REFERENCED(true, false, false),

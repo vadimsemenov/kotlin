@@ -17,7 +17,8 @@ import org.jetbrains.kotlin.types.model.TypeSubstitutorMarker
 class IrTypeSubstitutor(
     typeParameters: List<IrTypeParameterSymbol>,
     typeArguments: List<IrTypeArgument>,
-    private val irBuiltIns: IrBuiltIns
+    private val irBuiltIns: IrBuiltIns,
+    private val allowUnsubstituted: Boolean = false
 ): TypeSubstitutorMarker {
     init {
         assert(typeParameters.size == typeArguments.size) {

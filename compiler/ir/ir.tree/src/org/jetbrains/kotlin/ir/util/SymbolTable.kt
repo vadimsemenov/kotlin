@@ -36,16 +36,6 @@ interface IrProvider {
     fun getDeclaration(symbol: IrSymbol): IrDeclaration?
 }
 
-/**
- * Extension of [IrProvider] which always produces inheritors of [IrLazyDeclarationBase].
- * Thus, it needs [declarationStubGenerator] to be able to produce IR declarations.
- */
-interface LazyIrProvider : IrProvider {
-    var declarationStubGenerator: DeclarationStubGenerator
-
-    override fun getDeclaration(symbol: IrSymbol): IrLazyDeclarationBase?
-}
-
 interface IrDeserializer : IrProvider {
     fun declareForwardDeclarations()
 }
@@ -660,6 +650,29 @@ open class SymbolTable(val signaturer: IdSignatureComposer) : ReferenceSymbolTab
                 declare(descriptor, { IrSimpleFunctionSymbolImpl(descriptor) }, functionFactory)
             }
         }
+    }
+
+    fun rebindSimpleFunction(
+        sig: IdSignature,
+        function: IrSimpleFunction
+    ) {
+        assert(sig.isPublic)
+        val symbol = simpleFunctionSymbolTable.referenced(sig) { error("Symbol for $sig must be in the symbol table") }
+        assert(symbol.owner == function)
+        simpleFunctionSymbolTable.unboundSymbols.remove(symbol)
+    }
+
+    fun rebindProperty(
+        sig: IdSignature,
+        property: IrProperty
+    ) {
+        assert(sig.isPublic)
+        val symbol = propertySymbolTable.referenced(sig) { error("Symbol for $sig must be in the symbol table") }
+        assert(symbol.owner == property)
+        propertySymbolTable.unboundSymbols.remove(symbol)
+    }
+    private fun createBuiltInOperatorSymbol(descriptor: FunctionDescriptor, sig: IdSignature): IrSimpleFunctionSymbol {
+        return IrSimpleFunctionPublicSymbolImpl(descriptor, sig)
     }
 
     override fun referenceSimpleFunction(descriptor: FunctionDescriptor) =
