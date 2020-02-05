@@ -1,5 +1,5 @@
 /*
- * Copyright 2010-2019 JetBrains s.r.o. and Kotlin Programming Language contributors.
+ * Copyright 2010-2020 JetBrains s.r.o. and Kotlin Programming Language contributors.
  * Use of this source code is governed by the Apache 2.0 license that can be found in the license/LICENSE.txt file.
  */
 
@@ -14,6 +14,7 @@ import com.intellij.psi.impl.source.codeStyle.lineIndent.FormatterBasedLineInden
 import com.intellij.psi.impl.source.codeStyle.lineIndent.JavaLikeLangLineIndentProvider
 import com.intellij.psi.tree.IElementType
 import org.apache.log4j.Logger
+import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.lexer.KtTokens
 import kotlin.math.max
@@ -35,8 +36,10 @@ class KotlinLineIndentProvider : JavaLikeLangLineIndentProvider() {
             val message = "Java-like indent is not equals to formatter based indent text:\n${
             editor.document.text.substring(max(offset - 30, 0), min(offset + 30, editor.document.textLength))
             }"
+            println(message)
             LOG.error(message, Throwable(message))
         } else if (result === LineIndentProvider.DO_NOT_ADJUST || result == null) {
+            println("Java-like indent is empty...")
             LOG.info("Java-like indent is empty...")
         }
 
@@ -56,9 +59,12 @@ class KotlinLineIndentProvider : JavaLikeLangLineIndentProvider() {
             KtTokens.RPAR to JavaLikeElement.RightParenthesis,
             KtTokens.LPAR to JavaLikeElement.LeftParenthesis,
             KtTokens.COLON to JavaLikeElement.Colon,
+            KtNodeTypes.WHEN_ENTRY to JavaLikeElement.SwitchCase,
             KtTokens.ELSE_KEYWORD to JavaLikeElement.ElseKeyword,
             KtTokens.IF_KEYWORD to JavaLikeElement.IfKeyword,
+            KtTokens.WHILE_KEYWORD to JavaLikeElement.IfKeyword,
             KtTokens.FOR_KEYWORD to JavaLikeElement.ForKeyword,
+            KtTokens.WHEN_KEYWORD to JavaLikeElement.ForKeyword,
             KtTokens.TRY_KEYWORD to JavaLikeElement.TryKeyword,
             KtTokens.DO_KEYWORD to JavaLikeElement.DoKeyword,
             KtTokens.BLOCK_COMMENT to JavaLikeElement.BlockComment,
