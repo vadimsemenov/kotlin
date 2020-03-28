@@ -12,7 +12,7 @@ fun <R> id2(x: R): R = x
 class Out<out R>(x: R)
 
 fun main() {
-    val x1 = select(id1 { B() }, id2 { <!TYPE_MISMATCH, TYPE_MISMATCH!>C()<!> })
+    val x1 = select(id1 { B() }, id2 { C() })
     val x2 = select({ B() }, { C() }) // OK, CST = () -> A
     val x3 = select(id1(Out(B())), id2(Out(C()))) // OK, CST = Out<A>
 }
