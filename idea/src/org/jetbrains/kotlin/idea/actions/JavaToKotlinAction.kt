@@ -17,6 +17,8 @@
 package org.jetbrains.kotlin.idea.actions
 
 import com.intellij.codeInsight.navigation.NavigationUtil
+import com.intellij.diagnostic.*
+import com.intellij.icons.AllIcons
 import com.intellij.ide.highlighter.ArchiveFileType
 import com.intellij.ide.highlighter.JavaFileType
 import com.intellij.ide.scratch.ScratchFileService
@@ -25,10 +27,14 @@ import com.intellij.openapi.actionSystem.AnAction
 import com.intellij.openapi.actionSystem.AnActionEvent
 import com.intellij.openapi.actionSystem.CommonDataKeys
 import com.intellij.openapi.actionSystem.LangDataKeys
+import com.intellij.openapi.application.ApplicationManager
+import com.intellij.openapi.application.ModalityState
 import com.intellij.openapi.command.CommandProcessor
+import com.intellij.openapi.diagnostic.ExceptionWithAttachments
 import com.intellij.openapi.fileEditor.FileDocumentManager
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.Module
+import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.openapi.progress.ProgressManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.ui.MessageType
@@ -59,9 +65,11 @@ import org.jetbrains.kotlin.idea.util.isRunningInCidrIde
 import org.jetbrains.kotlin.j2k.*
 import org.jetbrains.kotlin.psi.KtFile
 import org.jetbrains.kotlin.psi.UserDataProperty
+import org.jetbrains.kotlin.utils.addToStdlib.safeAs
 import java.io.File
 import java.io.IOException
 import java.util.*
+import kotlin.Result
 import kotlin.system.measureTimeMillis
 
 var VirtualFile.pathBeforeJ2K: String? by UserDataProperty(Key.create<String>("PATH_BEFORE_J2K_CONVERSION"))
@@ -122,9 +130,10 @@ class JavaToKotlinAction : AnAction() {
             module: Module,
             enableExternalCodeProcessing: Boolean = true,
             askExternalCodeProcessing: Boolean = true,
-            forceUsingOldJ2k: Boolean = false
+            forceUsingOldJ2k: Boolean = false,
+            handleException: (Throwable) -> Unit
         ): List<KtFile> {
-            var converterResult: FilesResult? = null
+            var converterResult: Result<FilesResult>? = null
             fun convert() {
                 val converter =
                     if (forceUsingOldJ2k) OldJavaToKotlinConverter(
@@ -137,12 +146,15 @@ class JavaToKotlinAction : AnAction() {
                         ConverterSettings.defaultSettings,
                         IdeaJavaToKotlinServices
                     )
-                converterResult = converter.filesToKotlin(
-                    javaFiles,
-                    if (forceUsingOldJ2k) J2kPostProcessor(formatCode = true)
-                    else J2kConverterExtension.extension(useNewJ2k = ExperimentalFeatures.NewJ2k.isEnabled).createPostProcessor(formatCode = true),
-                    progress = ProgressManager.getInstance().progressIndicator!!
-                )
+                converterResult = runCatching {
+                    converter.filesToKotlin(
+                        javaFiles,
+                        if (forceUsingOldJ2k) J2kPostProcessor(formatCode = true)
+                        else J2kConverterExtension.extension(useNewJ2k = ExperimentalFeatures.NewJ2k.isEnabled)
+                            .createPostProcessor(formatCode = true),
+                        progress = ProgressManager.getInstance().progressIndicator!!
+                    )
+                }
             }
 
             fun convertWithStatistics() {
@@ -174,7 +186,7 @@ class JavaToKotlinAction : AnAction() {
 
             var externalCodeUpdate: ((List<KtFile>) -> Unit)? = null
 
-            val result = converterResult ?: return emptyList()
+            val result = converterResult?.getOrElse { handleException(it); null } ?: return emptyList()
             val externalCodeProcessing = result.externalCodeProcessing
             if (enableExternalCodeProcessing && externalCodeProcessing != null) {
                 val question = KotlinBundle.message("action.j2k.correction.required")
@@ -185,18 +197,23 @@ class JavaToKotlinAction : AnAction() {
                         Messages.getQuestionIcon()
                     ) == Messages.YES)
                 ) {
-                    ProgressManager.getInstance().runProcessWithProgressSynchronously(
-                        {
-                            runReadAction {
-                                externalCodeUpdate = externalCodeProcessing.prepareWriteOperation(
-                                    ProgressManager.getInstance().progressIndicator!!
-                                )
-                            }
-                        },
-                        title,
-                        true,
-                        project
-                    )
+                    try {
+                        ProgressManager.getInstance().runProcessWithProgressSynchronously(
+                            {
+                                runReadAction {
+                                    externalCodeUpdate = externalCodeProcessing.prepareWriteOperation(
+                                        ProgressManager.getInstance().progressIndicator!!
+                                    )
+                                }
+                            },
+                            title,
+                            true,
+                            project
+                        )
+                    } catch (e: Throwable) {
+                        handleException(e)
+                        return emptyList()
+                    }
                 }
             }
 
@@ -221,6 +238,13 @@ class JavaToKotlinAction : AnAction() {
     }
 
     override fun actionPerformed(e: AnActionEvent) {
+        val project = CommonDataKeys.PROJECT.getData(e.dataContext)!!
+        ExceptionHandler.withExceptionsHandled(project) {
+            performConversion(e, handleException)
+        }
+    }
+
+    private fun performConversion(e: AnActionEvent, handleException: (Throwable) -> Unit) {
         val javaFiles = selectedJavaFiles(e).filter { it.isWritable }.toList()
         val project = CommonDataKeys.PROJECT.getData(e.dataContext) ?: return
         val module = e.getData(LangDataKeys.MODULE) ?: return
@@ -233,7 +257,11 @@ class JavaToKotlinAction : AnAction() {
                 .showInCenterOf(statusBar.component)
         }
 
-        if (!J2kConverterExtension.extension(useNewJ2k = ExperimentalFeatures.NewJ2k.isEnabled).doCheckBeforeConversion(project, module)) return
+        if (!J2kConverterExtension.extension(useNewJ2k = ExperimentalFeatures.NewJ2k.isEnabled).doCheckBeforeConversion(
+                project,
+                module
+            )
+        ) return
 
         val firstSyntaxError = javaFiles.asSequence().map { PsiTreeUtil.findChildOfType(it, PsiErrorElement::class.java) }.firstOrNull()
 
@@ -261,7 +289,7 @@ class JavaToKotlinAction : AnAction() {
             }
         }
 
-        convertFiles(javaFiles, project, module)
+        convertFiles(javaFiles, project, module, handleException = handleException)
     }
 
     override fun update(e: AnActionEvent) {
@@ -309,5 +337,75 @@ class JavaToKotlinAction : AnAction() {
             })
         }
         return result
+    }
+}
+
+private object ExceptionHandler {
+    fun withExceptionsHandled(project: Project, action: ExceptionHandlingScope.() -> Unit) {
+        val messagePool = MessagePool.getInstance()
+
+        val exceptionHandlingScope = ExceptionHandlingScope { exception ->
+            if (exception is ProcessCanceledException) {
+                throw exception
+            }
+            ApplicationManager.getApplication().invokeLater {
+                if (showReportDialog(project)) {
+                    val onErrorListener = object : MessagePoolAddedListener() {
+                        override fun newEntryAdded() {
+                            messagePool.removeListener(this)
+
+                            ApplicationManager.getApplication().invokeLater(
+                                { IdeMessagePanel(null, messagePool).openErrorsDialog(exception.asLogMessage().data as? LogMessage) },
+                                ModalityState.NON_MODAL // after Java to Kotlin conversion error is closed
+                            )
+                        }
+                    }
+                    messagePool.addListener(onErrorListener)
+                    messagePool.addIdeFatalMessage(exception.asLogMessage())
+                }
+            }
+        }
+        try {
+            exceptionHandlingScope.action()
+        } catch (e: ProcessCanceledException) {
+            throw e
+        } catch (e: Throwable) {
+            exceptionHandlingScope.handleException(e)
+        }
+    }
+
+    private fun showReportDialog(project: Project) = Messages.showDialog(
+        project,
+        KotlinBundle.message("action.j2k.conversion.error.text"),
+        KotlinBundle.message("action.j2k.conversion.error.title"),
+        arrayOf(
+            KotlinBundle.message("action.j2k.conversion.error.cancel"),
+            KotlinBundle.message("action.j2k.conversion.error.report")
+        ),
+        1,
+        AllIcons.General.Error
+    ) == 1
+
+    private fun Throwable.asLogMessage() = LogMessage.createEvent(
+        J2KException.create(this),
+        null,
+        *safeAs<ExceptionWithAttachments>()?.attachments.orEmpty()
+    )
+
+    class ExceptionHandlingScope(val handleException: (Throwable) -> Unit)
+
+
+    private abstract class MessagePoolAddedListener : MessagePoolListener {
+        override fun entryWasRead() {}
+        override fun poolCleared() {}
+    }
+}
+
+class J2KException private constructor(cause: Throwable) : Exception(cause) {
+    companion object {
+        fun create(exception: Throwable) = when (exception) {
+            is J2KException -> exception
+            else -> J2KException(exception)
+        }
     }
 }

@@ -33,6 +33,7 @@ import org.jetbrains.kotlin.idea.KotlinBundle
 import org.jetbrains.kotlin.idea.KotlinPluginUpdater
 import org.jetbrains.kotlin.idea.KotlinPluginUtil
 import org.jetbrains.kotlin.idea.PluginUpdateStatus
+import org.jetbrains.kotlin.idea.actions.J2KException
 import org.jetbrains.kotlin.idea.util.isEap
 import java.awt.Component
 import java.io.IOException
@@ -188,6 +189,10 @@ class KotlinReportSubmitter : ITNReporterCompat() {
         }
 
         if (ApplicationManager.getApplication().isUnitTestMode) {
+            return true
+        }
+
+        if (event.throwable is J2KException) {
             return true
         }
 

@@ -192,7 +192,8 @@ class KotlinCreateTestIntention : SelfTargetingRangeIntention<KtNamedDeclaration
                                     project,
                                     srcModule,
                                     false,
-                                    forceUsingOldJ2k = true
+                                    forceUsingOldJ2k = true,
+                                    handleException = {}
                                 ).singleOrNull()
                             }
                         }

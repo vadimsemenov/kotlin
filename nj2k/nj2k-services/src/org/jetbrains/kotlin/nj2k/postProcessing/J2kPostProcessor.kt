@@ -9,6 +9,7 @@ import com.intellij.openapi.diagnostic.Logger
 import com.intellij.openapi.progress.ProcessCanceledException
 import com.intellij.psi.impl.source.PostprocessReformattingAspect
 import org.jetbrains.kotlin.diagnostics.Errors
+import org.jetbrains.kotlin.idea.actions.J2KException
 import org.jetbrains.kotlin.idea.caches.resolve.resolveImportReference
 import org.jetbrains.kotlin.idea.formatter.commitAndUnblockDocument
 import org.jetbrains.kotlin.idea.inspections.*
@@ -53,6 +54,7 @@ class NewJ2kPostProcessor : PostProcessor {
         onPhaseChanged: ((Int, String) -> Unit)?
     ) {
         if (converterContext !is NewJ2kConverterContext) error("Invalid converter context for new J2K")
+        val exceptions = mutableListOf<Throwable>()
         for ((i, group) in processings.withIndex()) {
             onPhaseChanged?.invoke(i + 1, group.description)
             for (processing in group.processings) {
@@ -61,12 +63,14 @@ class NewJ2kPostProcessor : PostProcessor {
                 } catch (e: ProcessCanceledException) {
                     throw e
                 } catch (t: Throwable) {
-                    LOG.error(t)
+                    LOG.error(J2KException.create(t))
+                    exceptions += t
                 } finally {
                     target.files().forEach(::commitFile)
                 }
             }
         }
+        exceptions.firstOrNull()?.also { throw it }
     }
 
     private fun GeneralPostProcessing.runProcessingConsideringOptions(
