@@ -58,15 +58,11 @@ object Ordering : TemplateGroupBase() {
         include(InvariantArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
     } builder {
         since("1.4")
-        inlineOnly()
         doc { "Reverses elements of the ${f.collection} in the specified range in-place." }
         returns("Unit")
         body {
             """
-            if (fromIndex < 0 || toIndex > size)
-                throw IndexOutOfBoundsException("fromIndex: ${"$"}fromIndex, toIndex: ${"$"}toIndex, size: ${"$"}size")
-            if (fromIndex > toIndex)
-                throw IllegalArgumentException("fromIndex: ${"$"}fromIndex > toIndex: ${"$"}toIndex")
+            AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
             val midPoint = (fromIndex + toIndex) / 2
             if (fromIndex == midPoint) return
             var reverseIndex = toIndex - 1
@@ -79,6 +75,7 @@ object Ordering : TemplateGroupBase() {
             """
         }
         specialFor(ArraysOfUnsigned) {
+            inlineOnly()
             body { """storage.reverse(fromIndex, toIndex)""" }
         }
     }
@@ -274,15 +271,14 @@ object Ordering : TemplateGroupBase() {
         exclude(PrimitiveType.Boolean)
     } builder {
         since("1.4")
-        inlineOnly()
         doc { """Sorts a range in the ${f.collection} in-place descending according to their natural sort order.""" }
-        if (f == ArraysOfObjects) {
-            appendStableSortNote()
-        }
         returns("Unit")
         typeParam("T : Comparable<T>")
 
-        body { """sortWith(reverseOrder(), fromIndex, toIndex)""" }
+        specialFor(ArraysOfObjects) {
+            appendStableSortNote()
+            body { """sortWith(reverseOrder(), fromIndex, toIndex)""" }
+        }
         body(ArraysOfPrimitives, ArraysOfUnsigned) {
             """
             sort(fromIndex, toIndex)

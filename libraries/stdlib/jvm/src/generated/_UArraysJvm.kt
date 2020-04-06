@@ -110,8 +110,7 @@ public inline fun UShortArray.reverse(fromIndex: Int = 0, toIndex: Int = size): 
  */
 @SinceKotlin("1.4")
 @ExperimentalUnsignedTypes
-@kotlin.internal.InlineOnly
-public inline fun UIntArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
+public fun UIntArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
     sort(fromIndex, toIndex)
     reverse(fromIndex, toIndex)
 }
@@ -121,8 +120,7 @@ public inline fun UIntArray.sortDescending(fromIndex: Int = 0, toIndex: Int = si
  */
 @SinceKotlin("1.4")
 @ExperimentalUnsignedTypes
-@kotlin.internal.InlineOnly
-public inline fun ULongArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
+public fun ULongArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
     sort(fromIndex, toIndex)
     reverse(fromIndex, toIndex)
 }
@@ -132,8 +130,7 @@ public inline fun ULongArray.sortDescending(fromIndex: Int = 0, toIndex: Int = s
  */
 @SinceKotlin("1.4")
 @ExperimentalUnsignedTypes
-@kotlin.internal.InlineOnly
-public inline fun UByteArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
+public fun UByteArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
     sort(fromIndex, toIndex)
     reverse(fromIndex, toIndex)
 }
@@ -143,8 +140,7 @@ public inline fun UByteArray.sortDescending(fromIndex: Int = 0, toIndex: Int = s
  */
 @SinceKotlin("1.4")
 @ExperimentalUnsignedTypes
-@kotlin.internal.InlineOnly
-public inline fun UShortArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
+public fun UShortArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
     sort(fromIndex, toIndex)
     reverse(fromIndex, toIndex)
 }
@@ -344,40 +340,40 @@ public fun UShortArray.binarySearch(element: UShort, fromIndex: Int = 0, toIndex
 /**
  * Sorts a range in the array in-place.
  */
-@SinceKotlin("1.3")
+@SinceKotlin("1.4")
 @ExperimentalUnsignedTypes
-@kotlin.internal.InlineOnly
-public inline fun UIntArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    storage.sort(fromIndex, toIndex)
+public fun UIntArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
+    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+    sortArray(this, fromIndex, toIndex)
 }
 
 /**
  * Sorts a range in the array in-place.
  */
-@SinceKotlin("1.3")
+@SinceKotlin("1.4")
 @ExperimentalUnsignedTypes
-@kotlin.internal.InlineOnly
-public inline fun ULongArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    storage.sort(fromIndex, toIndex)
+public fun ULongArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
+    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+    sortArray(this, fromIndex, toIndex)
 }
 
 /**
  * Sorts a range in the array in-place.
  */
-@SinceKotlin("1.3")
+@SinceKotlin("1.4")
 @ExperimentalUnsignedTypes
-@kotlin.internal.InlineOnly
-public inline fun UByteArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    storage.sort(fromIndex, toIndex)
+public fun UByteArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
+    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+    sortArray(this, fromIndex, toIndex)
 }
 
 /**
  * Sorts a range in the array in-place.
  */
-@SinceKotlin("1.3")
+@SinceKotlin("1.4")
 @ExperimentalUnsignedTypes
-@kotlin.internal.InlineOnly
-public inline fun UShortArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    storage.sort(fromIndex, toIndex)
+public fun UShortArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
+    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+    sortArray(this, fromIndex, toIndex)
 }
 
