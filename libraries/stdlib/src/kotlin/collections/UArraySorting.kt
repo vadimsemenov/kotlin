@@ -143,10 +143,10 @@ private fun quickSort(
  * Sorts the given array using qsort algorithm.
  */
 @ExperimentalUnsignedTypes
-internal fun sortArray(array: UByteArray)    = quickSort(array, 0, array.size - 1)
+internal fun sortArray(array: UByteArray, fromIndex: Int = 0, toIndex: Int = array.size)    = quickSort(array, fromIndex, toIndex - 1)
 @ExperimentalUnsignedTypes
-internal fun sortArray(array: UShortArray)   = quickSort(array, 0, array.size - 1)
+internal fun sortArray(array: UShortArray, fromIndex: Int = 0, toIndex: Int = array.size)   = quickSort(array, fromIndex, toIndex - 1)
 @ExperimentalUnsignedTypes
-internal fun sortArray(array: UIntArray)     = quickSort(array, 0, array.size - 1)
+internal fun sortArray(array: UIntArray, fromIndex: Int = 0, toIndex: Int = array.size)     = quickSort(array, fromIndex, toIndex - 1)
 @ExperimentalUnsignedTypes
-internal fun sortArray(array: ULongArray)    = quickSort(array, 0, array.size - 1)
+internal fun sortArray(array: ULongArray, fromIndex: Int = 0, toIndex: Int = array.size)    = quickSort(array, fromIndex, toIndex - 1)

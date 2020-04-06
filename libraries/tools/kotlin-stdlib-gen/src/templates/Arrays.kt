@@ -1309,8 +1309,13 @@ object ArrayOps : TemplateGroupBase() {
             "java.util.Arrays.sort(this, fromIndex, toIndex)"
         }
         specialFor(ArraysOfUnsigned) {
-            inlineOnly()
-            body { "storage.sort(fromIndex, toIndex)" }
+            since("1.4")
+            body {
+                """
+                AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+                sortArray(this, fromIndex, toIndex)
+                """
+            }
         }
     }
 
