@@ -502,7 +502,12 @@ object Snapshots : TemplateGroupBase() {
         body {
             val resultMap = when (family) {
                 Iterables -> "LinkedHashMap<K, V>(mapCapacity(collectionSizeOrDefault(10)).coerceAtLeast(16))"
-                CharSequences -> "LinkedHashMap<K, V>(mapCapacity(length).coerceAtLeast(16))"
+                CharSequences -> "LinkedHashMap<K, V>(mapCapacity(length).coerceIn(16, 128))"
+                ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned -> if (primitive == PrimitiveType.Char) {
+                    "LinkedHashMap<K, V>(mapCapacity(size).coerceIn(16, 128))"
+                } else {
+                    "LinkedHashMap<K, V>(mapCapacity(size).coerceAtLeast(16))"
+                }
                 else -> "LinkedHashMap<K, V>()"
             }
             """

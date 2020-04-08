@@ -8441,7 +8441,7 @@ public inline fun <K, V, M : MutableMap<in K, in V>> CharArray.associateTo(desti
 @SinceKotlin("1.4")
 @ExperimentalStdlibApi
 public inline fun <K, V> Array<out K>.associateWith(valueSelector: (K) -> V): Map<K, V> {
-    val result = LinkedHashMap<K, V>()
+    val result = LinkedHashMap<K, V>(mapCapacity(size).coerceAtLeast(16))
     return associateWithTo(result, valueSelector)
 }
 
@@ -8459,7 +8459,7 @@ public inline fun <K, V> Array<out K>.associateWith(valueSelector: (K) -> V): Ma
 @ExperimentalStdlibApi
 @kotlin.internal.InlineOnly
 public inline fun <V> ByteArray.associateWith(valueSelector: (Byte) -> V): Map<Byte, V> {
-    val result = LinkedHashMap<Byte, V>()
+    val result = LinkedHashMap<Byte, V>(mapCapacity(size).coerceAtLeast(16))
     return associateWithTo(result, valueSelector)
 }
 
@@ -8477,7 +8477,7 @@ public inline fun <V> ByteArray.associateWith(valueSelector: (Byte) -> V): Map<B
 @ExperimentalStdlibApi
 @kotlin.internal.InlineOnly
 public inline fun <V> ShortArray.associateWith(valueSelector: (Short) -> V): Map<Short, V> {
-    val result = LinkedHashMap<Short, V>()
+    val result = LinkedHashMap<Short, V>(mapCapacity(size).coerceAtLeast(16))
     return associateWithTo(result, valueSelector)
 }
 
@@ -8495,7 +8495,7 @@ public inline fun <V> ShortArray.associateWith(valueSelector: (Short) -> V): Map
 @ExperimentalStdlibApi
 @kotlin.internal.InlineOnly
 public inline fun <V> IntArray.associateWith(valueSelector: (Int) -> V): Map<Int, V> {
-    val result = LinkedHashMap<Int, V>()
+    val result = LinkedHashMap<Int, V>(mapCapacity(size).coerceAtLeast(16))
     return associateWithTo(result, valueSelector)
 }
 
@@ -8513,7 +8513,7 @@ public inline fun <V> IntArray.associateWith(valueSelector: (Int) -> V): Map<Int
 @ExperimentalStdlibApi
 @kotlin.internal.InlineOnly
 public inline fun <V> LongArray.associateWith(valueSelector: (Long) -> V): Map<Long, V> {
-    val result = LinkedHashMap<Long, V>()
+    val result = LinkedHashMap<Long, V>(mapCapacity(size).coerceAtLeast(16))
     return associateWithTo(result, valueSelector)
 }
 
@@ -8531,7 +8531,7 @@ public inline fun <V> LongArray.associateWith(valueSelector: (Long) -> V): Map<L
 @ExperimentalStdlibApi
 @kotlin.internal.InlineOnly
 public inline fun <V> FloatArray.associateWith(valueSelector: (Float) -> V): Map<Float, V> {
-    val result = LinkedHashMap<Float, V>()
+    val result = LinkedHashMap<Float, V>(mapCapacity(size).coerceAtLeast(16))
     return associateWithTo(result, valueSelector)
 }
 
@@ -8549,7 +8549,7 @@ public inline fun <V> FloatArray.associateWith(valueSelector: (Float) -> V): Map
 @ExperimentalStdlibApi
 @kotlin.internal.InlineOnly
 public inline fun <V> DoubleArray.associateWith(valueSelector: (Double) -> V): Map<Double, V> {
-    val result = LinkedHashMap<Double, V>()
+    val result = LinkedHashMap<Double, V>(mapCapacity(size).coerceAtLeast(16))
     return associateWithTo(result, valueSelector)
 }
 
@@ -8567,7 +8567,7 @@ public inline fun <V> DoubleArray.associateWith(valueSelector: (Double) -> V): M
 @ExperimentalStdlibApi
 @kotlin.internal.InlineOnly
 public inline fun <V> BooleanArray.associateWith(valueSelector: (Boolean) -> V): Map<Boolean, V> {
-    val result = LinkedHashMap<Boolean, V>()
+    val result = LinkedHashMap<Boolean, V>(mapCapacity(size).coerceAtLeast(16))
     return associateWithTo(result, valueSelector)
 }
 
@@ -8585,7 +8585,7 @@ public inline fun <V> BooleanArray.associateWith(valueSelector: (Boolean) -> V):
 @ExperimentalStdlibApi
 @kotlin.internal.InlineOnly
 public inline fun <V> CharArray.associateWith(valueSelector: (Char) -> V): Map<Char, V> {
-    val result = LinkedHashMap<Char, V>()
+    val result = LinkedHashMap<Char, V>(mapCapacity(size).coerceIn(16, 128))
     return associateWithTo(result, valueSelector)
 }
 
