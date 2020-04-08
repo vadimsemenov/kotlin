@@ -5,10 +5,6 @@
 
 package templates
 
-import templates.DocExtensions.collection
-import templates.DocExtensions.element
-import templates.DocExtensions.mapResult
-import templates.DocExtensions.pluralize
 import templates.Family.*
 import templates.SequenceClass.*
 
@@ -35,11 +31,22 @@ object SetOps : TemplateGroupBase() {
             """
         }
         body(ArraysOfObjects, ArraysOfPrimitives) {
-            """
-            val set = LinkedHashSet<T>(mapCapacity(size))
-            for (item in this) set.add(item)
-            return set
-            """
+            if (primitive == PrimitiveType.Char) {
+                """
+                val checkStart = size.coerceAtMost(128)
+                val linkedHashSet = LinkedHashSet<T>(mapCapacity(checkStart))
+                
+                for (index in 0 until size) {
+                    val char = get(index)
+                    if (index < checkStart || !linkedHashSet.contains(char)) {
+                        linkedHashSet.add(char)
+                    }
+                }
+                return linkedHashSet
+                """
+            } else {
+                "return toCollection(LinkedHashSet<T>(mapCapacity(size)))"
+            }
         }
         body(Sequences) {
             """

@@ -10937,9 +10937,7 @@ public infix fun CharArray.subtract(other: Iterable<Char>): Set<Char> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun <T> Array<out T>.toMutableSet(): MutableSet<T> {
-    val set = LinkedHashSet<T>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    return toCollection(LinkedHashSet<T>(mapCapacity(size)))
 }
 
 /**
@@ -10948,9 +10946,7 @@ public fun <T> Array<out T>.toMutableSet(): MutableSet<T> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun ByteArray.toMutableSet(): MutableSet<Byte> {
-    val set = LinkedHashSet<Byte>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    return toCollection(LinkedHashSet<Byte>(mapCapacity(size)))
 }
 
 /**
@@ -10959,9 +10955,7 @@ public fun ByteArray.toMutableSet(): MutableSet<Byte> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun ShortArray.toMutableSet(): MutableSet<Short> {
-    val set = LinkedHashSet<Short>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    return toCollection(LinkedHashSet<Short>(mapCapacity(size)))
 }
 
 /**
@@ -10970,9 +10964,7 @@ public fun ShortArray.toMutableSet(): MutableSet<Short> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun IntArray.toMutableSet(): MutableSet<Int> {
-    val set = LinkedHashSet<Int>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    return toCollection(LinkedHashSet<Int>(mapCapacity(size)))
 }
 
 /**
@@ -10981,9 +10973,7 @@ public fun IntArray.toMutableSet(): MutableSet<Int> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun LongArray.toMutableSet(): MutableSet<Long> {
-    val set = LinkedHashSet<Long>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    return toCollection(LinkedHashSet<Long>(mapCapacity(size)))
 }
 
 /**
@@ -10992,9 +10982,7 @@ public fun LongArray.toMutableSet(): MutableSet<Long> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun FloatArray.toMutableSet(): MutableSet<Float> {
-    val set = LinkedHashSet<Float>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    return toCollection(LinkedHashSet<Float>(mapCapacity(size)))
 }
 
 /**
@@ -11003,9 +10991,7 @@ public fun FloatArray.toMutableSet(): MutableSet<Float> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun DoubleArray.toMutableSet(): MutableSet<Double> {
-    val set = LinkedHashSet<Double>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    return toCollection(LinkedHashSet<Double>(mapCapacity(size)))
 }
 
 /**
@@ -11014,9 +11000,7 @@ public fun DoubleArray.toMutableSet(): MutableSet<Double> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun BooleanArray.toMutableSet(): MutableSet<Boolean> {
-    val set = LinkedHashSet<Boolean>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    return toCollection(LinkedHashSet<Boolean>(mapCapacity(size)))
 }
 
 /**
@@ -11025,9 +11009,15 @@ public fun BooleanArray.toMutableSet(): MutableSet<Boolean> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun CharArray.toMutableSet(): MutableSet<Char> {
-    val set = LinkedHashSet<Char>(mapCapacity(size))
-    for (item in this) set.add(item)
-    return set
+    val checkStart = size.coerceAtMost(128)
+    val linkedHashSet = LinkedHashSet<Char>(mapCapacity(checkStart))
+    for (index in 0 until size) {
+        val char = get(index)
+        if (index < checkStart || !linkedHashSet.contains(char)) {
+            linkedHashSet.add(char)
+        }
+    }
+    return linkedHashSet
 }
 
 /**
