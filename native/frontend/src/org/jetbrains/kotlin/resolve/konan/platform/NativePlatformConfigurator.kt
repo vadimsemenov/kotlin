@@ -10,13 +10,15 @@ import org.jetbrains.kotlin.container.useImpl
 import org.jetbrains.kotlin.container.useInstance
 import org.jetbrains.kotlin.descriptors.CallableMemberDescriptor
 import org.jetbrains.kotlin.psi.KtCallableDeclaration
-import org.jetbrains.kotlin.resolve.*
+import org.jetbrains.kotlin.resolve.BindingContext
+import org.jetbrains.kotlin.resolve.PlatformConfiguratorBase
 import org.jetbrains.kotlin.resolve.checkers.ExpectedActualDeclarationChecker
 import org.jetbrains.kotlin.resolve.inline.ReasonableInlineRule
 import org.jetbrains.kotlin.resolve.jvm.checkers.SuperCallWithDefaultArgumentsChecker
 import org.jetbrains.kotlin.resolve.konan.diagnostics.NativeSharedImmutableChecker
 import org.jetbrains.kotlin.resolve.konan.diagnostics.NativeThrowsChecker
 import org.jetbrains.kotlin.resolve.konan.diagnostics.NativeTopLevelSingletonChecker
+import org.jetbrains.kotlin.resolve.scopes.synthetic.FunInterfaceConstructorsScopeProvider
 
 object NativePlatformConfigurator : PlatformConfiguratorBase(
     additionalCallCheckers = listOf(SuperCallWithDefaultArgumentsChecker()),
@@ -27,6 +29,7 @@ object NativePlatformConfigurator : PlatformConfiguratorBase(
 ) {
     override fun configureModuleComponents(container: StorageComponentContainer) {
         container.useInstance(NativeInliningRule)
+        container.useImpl<FunInterfaceConstructorsScopeProvider>()
     }
 
     override fun configureModuleDependentCheckers(container: StorageComponentContainer) {

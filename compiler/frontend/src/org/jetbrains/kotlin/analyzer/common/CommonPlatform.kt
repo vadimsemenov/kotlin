@@ -7,11 +7,15 @@ package org.jetbrains.kotlin.analyzer.common
 
 import org.jetbrains.kotlin.analyzer.ModuleInfo
 import org.jetbrains.kotlin.container.StorageComponentContainer
+import org.jetbrains.kotlin.container.useImpl
 import org.jetbrains.kotlin.resolve.*
+import org.jetbrains.kotlin.resolve.scopes.synthetic.FunInterfaceConstructorsScopeProvider
 import org.jetbrains.kotlin.storage.StorageManager
 
 private object CommonPlatformConfigurator : PlatformConfiguratorBase() {
-    override fun configureModuleComponents(container: StorageComponentContainer) {}
+    override fun configureModuleComponents(container: StorageComponentContainer) {
+        container.useImpl<FunInterfaceConstructorsScopeProvider>()
+    }
 }
 
 object CommonPlatformAnalyzerServices : PlatformDependentAnalyzerServices() {
