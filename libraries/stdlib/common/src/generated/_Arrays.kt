@@ -8900,7 +8900,7 @@ public fun BooleanArray.toHashSet(): HashSet<Boolean> {
  * Returns a new [HashSet] of all elements.
  */
 public fun CharArray.toHashSet(): HashSet<Char> {
-    val checkStart = minOf(size, 128)
+    val checkStart = size.coerceAtMost(128)
     val hashSet = HashSet<Char>(mapCapacity(checkStart))
     for (index in 0 until size) {
         val char = get(index)
@@ -9199,11 +9199,17 @@ public fun BooleanArray.toSet(): Set<Boolean> {
  * The returned set preserves the element iteration order of the original array.
  */
 public fun CharArray.toSet(): Set<Char> {
-    return when (size) {
-        0 -> emptySet()
-        1 -> setOf(this[0])
-        else -> toCollection(LinkedHashSet<Char>(mapCapacity(size)))
+    if (size == 0) return emptySet()
+    if (size == 1) return setOf(this[0])
+    val checkStart = size.coerceAtMost(128)
+    val linkedHashSet = LinkedHashSet<Char>(mapCapacity(checkStart))
+    for (index in 0 until size) {
+        val char = get(index)
+        if (index < checkStart || !linkedHashSet.contains(char)) {
+            linkedHashSet.add(char)
+        }
     }
+    return linkedHashSet
 }
 
 /**

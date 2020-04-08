@@ -734,7 +734,7 @@ public fun <C : MutableCollection<in Char>> CharSequence.toCollection(destinatio
  * Returns a new [HashSet] of all characters.
  */
 public fun CharSequence.toHashSet(): HashSet<Char> {
-    val checkStart = minOf(length, 128)
+    val checkStart = length.coerceAtMost(128)
     val hashSet = HashSet<Char>(mapCapacity(checkStart))
     for (index in 0 until length) {
         val char = get(index)
@@ -769,11 +769,17 @@ public fun CharSequence.toMutableList(): MutableList<Char> {
  * The returned set preserves the element iteration order of the original char sequence.
  */
 public fun CharSequence.toSet(): Set<Char> {
-    return when (length) {
-        0 -> emptySet()
-        1 -> setOf(this[0])
-        else -> toCollection(LinkedHashSet<Char>(mapCapacity(length)))
+    if (length == 0) return emptySet()
+    if (length == 1) return setOf(this[0])
+    val checkStart = length.coerceAtMost(128)
+    val linkedHashSet = LinkedHashSet<Char>(mapCapacity(checkStart))
+    for (index in 0 until length) {
+        val char = get(index)
+        if (index < checkStart || !linkedHashSet.contains(char)) {
+            linkedHashSet.add(char)
+        }
     }
+    return linkedHashSet
 }
 
 /**

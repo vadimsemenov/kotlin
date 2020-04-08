@@ -55,7 +55,6 @@ object Snapshots : TemplateGroupBase() {
                     1 -> setOf(if (this is List) this[0] else iterator().next())
                     else -> toCollection(LinkedHashSet<T>(mapCapacity(size)))
                 }
-
             }
             return toCollection(LinkedHashSet<T>()).optimizeReadOnlySet()
             """
@@ -63,13 +62,32 @@ object Snapshots : TemplateGroupBase() {
         body(Sequences) { "return toCollection(LinkedHashSet<T>()).optimizeReadOnlySet()" }
 
         body(CharSequences, ArraysOfObjects, ArraysOfPrimitives) {
-            """
-            return when (${f.code.size}) {
-                0 -> emptySet()
-                1 -> setOf(this[0])
-                else -> toCollection(LinkedHashSet<T>(mapCapacity(${f.code.size})))
+            val size = f.code.size
+            if (f == CharSequences || primitive == PrimitiveType.Char) {
+                """
+                if ($size == 0) return emptySet()
+                if ($size == 1) return setOf(this[0])
+                
+                val checkStart = $size.coerceAtMost(128)
+                val linkedHashSet = LinkedHashSet<T>(mapCapacity(checkStart))
+                
+                for (index in 0 until $size) {
+                    val char = get(index)
+                    if (index < checkStart || !linkedHashSet.contains(char)) {
+                        linkedHashSet.add(char)
+                    }
+                }
+                return linkedHashSet
+                """
+            } else {
+                """
+                return when ($size) {
+                    0 -> emptySet()
+                    1 -> setOf(this[0])
+                    else -> toCollection(LinkedHashSet<T>(mapCapacity($size)))
+                }
+                """
             }
-            """
         }
     }
 
@@ -84,7 +102,7 @@ object Snapshots : TemplateGroupBase() {
         body(CharSequences, ArraysOfObjects, ArraysOfPrimitives) {
             if (f == CharSequences || primitive == PrimitiveType.Char) {
                 """
-                val checkStart = minOf(${f.code.size}, 128)
+                val checkStart = ${f.code.size}.coerceAtMost(128)
                 val hashSet = HashSet<T>(mapCapacity(checkStart))
             
                 for (index in 0 until ${f.code.size}) {
