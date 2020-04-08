@@ -300,8 +300,7 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
                 value = "!isGetter"
                 withGetter = true
             }
-            default("contractDescription", "FirEmptyContractDescription")
-            useTypes(modalityType, emptyContractDescriptionType)
+            useTypes(modalityType)
             kind = OpenClass
         }
 
@@ -453,8 +452,6 @@ object ImplementationConfigurator : AbstractFirTreeImplementationConfigurator() 
 
         impl(simpleFunction) {
             kind = OpenClass
-            default("contractDescription", "FirEmptyContractDescription")
-            useTypes(emptyContractDescriptionType)
         }
 
         impl(delegatedTypeRef) {
