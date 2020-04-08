@@ -6,7 +6,6 @@
 package org.jetbrains.kotlin.idea.scripting.gradle.importing
 
 import com.intellij.openapi.components.service
-import com.intellij.openapi.externalSystem.model.task.ExternalSystemTaskId
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
@@ -14,10 +13,9 @@ import org.gradle.tooling.model.kotlin.dsl.EditorReportSeverity
 import org.gradle.tooling.model.kotlin.dsl.KotlinDslScriptsModel
 import org.jetbrains.kotlin.idea.KotlinIdeaGradleBundle
 import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
-import org.jetbrains.kotlin.idea.core.script.configuration.cache.CachedConfigurationInputs
 import org.jetbrains.kotlin.idea.core.script.configuration.cache.ScriptConfigurationSnapshot
 import org.jetbrains.kotlin.idea.scripting.gradle.GradleScriptInputsWatcher
-import org.jetbrains.kotlin.idea.scripting.gradle.getGradleScriptInputsStamp
+import org.jetbrains.kotlin.idea.scripting.gradle.GradleScriptingSupport
 import org.jetbrains.kotlin.scripting.definitions.findScriptDefinition
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
 import org.jetbrains.kotlin.scripting.resolve.VirtualFileScriptSource
@@ -94,7 +92,6 @@ private fun KotlinDslScriptsModel.toListOfScriptModels(): List<KotlinDslScriptMo
         // todo(KT-34440): take inputs snapshot before starting import
         KotlinDslScriptModel(
             file.absolutePath,
-            System.currentTimeMillis(),
             model.classPath.map { it.absolutePath },
             model.sourcePath.map { it.absolutePath },
             model.implicitImports,
@@ -102,69 +99,44 @@ private fun KotlinDslScriptsModel.toListOfScriptModels(): List<KotlinDslScriptMo
         )
     }
 
+class GradleKtsContext(val project: Project, val javaHome: File?)
+
+fun KotlinDslScriptModel.toScriptConfiguration(context: GradleKtsContext): ScriptCompilationConfigurationWrapper? {
+    val scriptFile = File(file)
+    val virtualFile = VfsUtil.findFile(scriptFile.toPath(), true)!!
+
+    val definition = virtualFile.findScriptDefinition(context.project) ?: return null
+
+    return ScriptCompilationConfigurationWrapper.FromCompilationConfiguration(
+        VirtualFileScriptSource(virtualFile),
+        definition.compilationConfiguration.with {
+            if (context.javaHome != null) {
+                jvm.jdkHome(context.javaHome)
+            }
+            defaultImports(imports)
+            dependencies(JvmDependency(classPath.map { File(it) }))
+            ide.dependenciesSources(JvmDependency(sourcePath.map { File(it) }))
+        }.adjustByDefinition(definition)
+    )
+}
+
 fun saveScriptModels(
-    project: Project,
-    task: ExternalSystemTaskId,
-    javaHomeStr: String?,
+    resolverContext: ProjectResolverContext,
     models: List<KotlinDslScriptModel>
 ) {
-    val scriptConfigurations = mutableListOf<Pair<VirtualFile, ScriptConfigurationSnapshot>>()
+    val task = resolverContext.externalSystemTaskId
+    val project = task.findProject() ?: return
+    val settings = resolverContext.settings ?: return
 
     val errorReporter = KotlinGradleDslErrorReporter(project, task)
 
-    val javaHome = javaHomeStr?.let { File(it) }
+    val javaHome = settings.javaHome?.let { File(it) }
+    val context = GradleKtsContext(project, javaHome)
+
     models.forEach { model ->
-        val scriptFile = File(model.file)
-        val virtualFile = VfsUtil.findFile(scriptFile.toPath(), true)!!
-
-        val inputs = getGradleScriptInputsStamp(
-            project,
-            virtualFile,
-            givenTimeStamp = model.inputsTimeStamp
-        )
-
-        val definition = virtualFile.findScriptDefinition(project) ?: return@forEach
-
-        val configuration =
-            definition.compilationConfiguration.with {
-                if (javaHome != null) {
-                    jvm.jdkHome(javaHome)
-                }
-                defaultImports(model.imports)
-                dependencies(JvmDependency(model.classPath.map {
-                    File(
-                        it
-                    )
-                }))
-                ide.dependenciesSources(JvmDependency(model.sourcePath.map {
-                    File(
-                        it
-                    )
-                }))
-            }.adjustByDefinition(definition)
-
-        scriptConfigurations.add(
-            Pair(
-                virtualFile,
-                ScriptConfigurationSnapshot(
-                    inputs
-                        ?: CachedConfigurationInputs.OutOfDate,
-                    listOf(),
-                    ScriptCompilationConfigurationWrapper.FromCompilationConfiguration(
-                        VirtualFileScriptSource(virtualFile),
-                        configuration,
-                    ),
-                ),
-            ),
-        )
-
-        errorReporter.reportError(scriptFile, model)
+        errorReporter.reportError(File(model.file), model)
     }
 
-    project.service<GradleScriptInputsWatcher>().saveGradleProjectRootsAfterImport(
-        scriptConfigurations.map { it.first.parent.path }.toSet()
-    )
-
-    project.service<ScriptConfigurationManager>().saveCompilationConfigurationAfterImport(scriptConfigurations)
+    project.service<GradleScriptingSupport>().replace(context, models)
     project.service<GradleScriptInputsWatcher>().clearState()
 }
