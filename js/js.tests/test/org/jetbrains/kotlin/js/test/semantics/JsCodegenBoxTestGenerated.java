@@ -9439,6 +9439,11 @@ public class JsCodegenBoxTestGenerated extends AbstractJsCodegenBoxTest {
             runTest("compiler/testData/codegen/box/funInterface/receiverEvaluatedOnce.kt");
         }
 
+        @TestMetadata("samConstructorExplicitInvocation.kt")
+        public void testSamConstructorExplicitInvocation() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/samConstructorExplicitInvocation.kt");
+        }
+
         @TestMetadata("suspendFunInterfaceConversionCodegen.kt")
         public void testSuspendFunInterfaceConversionCodegen() throws Exception {
             runTest("compiler/testData/codegen/box/funInterface/suspendFunInterfaceConversionCodegen.kt");

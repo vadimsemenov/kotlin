@@ -12244,6 +12244,11 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
             runTest("compiler/testData/codegen/box/funInterface/receiverEvaluatedOnce.kt");
         }
 
+        @TestMetadata("samConstructorExplicitInvocation.kt")
+        public void testSamConstructorExplicitInvocation() throws Exception {
+            runTest("compiler/testData/codegen/box/funInterface/samConstructorExplicitInvocation.kt");
+        }
+
         @TestMetadata("suspendFunInterfaceConversionCodegen.kt")
         public void testSuspendFunInterfaceConversionCodegen() throws Exception {
             runTest("compiler/testData/codegen/box/funInterface/suspendFunInterfaceConversionCodegen.kt");
@@ -24569,13 +24574,13 @@ public class LightAnalysisModeTestGenerated extends AbstractLightAnalysisModeTes
         @TestDataPath("$PROJECT_ROOT")
         @RunWith(JUnit3RunnerWithInners.class)
         public static class MethodsFromAny extends AbstractLightAnalysisModeTest {
-            @TestMetadata("adaptedCallableReferencesNotEqualToCallablesFromAPI.kt")
-            public void ignoreAdaptedCallableReferencesNotEqualToCallablesFromAPI() throws Exception {
-                runTest("compiler/testData/codegen/box/reflection/methodsFromAny/adaptedCallableReferencesNotEqualToCallablesFromAPI.kt");
-            }
-
             private void runTest(String testDataFilePath) throws Exception {
                 KotlinTestUtils.runTest(this::doTest, TargetBackend.JVM, testDataFilePath);
+            }
+
+            @TestMetadata("adaptedCallableReferencesNotEqualToCallablesFromAPI.kt")
+            public void testAdaptedCallableReferencesNotEqualToCallablesFromAPI() throws Exception {
+                runTest("compiler/testData/codegen/box/reflection/methodsFromAny/adaptedCallableReferencesNotEqualToCallablesFromAPI.kt");
             }
 
             public void testAllFilesPresentInMethodsFromAny() throws Exception {
