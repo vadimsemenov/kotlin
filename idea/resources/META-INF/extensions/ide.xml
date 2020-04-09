@@ -68,10 +68,6 @@
                         interface="org.jetbrains.kotlin.idea.core.script.configuration.listener.ScriptChangeListener"
                         area="IDEA_PROJECT"/>
 
-        <extensionPoint qualifiedName="org.jetbrains.kotlin.scripting.idea.specialScriptConfigurationManagerProvider"
-                        interface="org.jetbrains.kotlin.idea.core.script.SpecialScriptConfigurationManagerProvider"
-                        area="IDEA_PROJECT"/>
-
         <extensionPoint qualifiedName="org.jetbrains.kotlin.additionalExtractableAnalyser"
                         interface="org.jetbrains.kotlin.idea.refactoring.introduce.extractionEngine.AdditionalExtractableAnalyser"/>
 

@@ -23,7 +23,7 @@ import org.jetbrains.plugins.gradle.util.GradleConstants
 
 fun runPartialGradleImport(project: Project) {
     val gradleSettings = ExternalSystemApiUtil.getSettings(project, GradleConstants.SYSTEM_ID)
-    val projectSettings = gradleSettings.linkedProjectsSettings
+    val projectSettings = gradleSettings.getLinkedProjectsSettings()
         .filterIsInstance<GradleProjectSettings>()
         .firstOrNull() ?: return
 

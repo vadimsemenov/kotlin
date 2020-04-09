@@ -25,7 +25,7 @@ class ScriptClassRootsIndexer(val project: Project) {
     private val concurrentTransactions = AtomicInteger()
 
     @Synchronized
-    fun markNewRoot(file: VirtualFile, configuration: ScriptCompilationConfigurationWrapper) {
+    fun markNewRoot(file: VirtualFile? = null, configuration: ScriptCompilationConfigurationWrapper? = null) {
         debug(file) { "new class roots found: $configuration" }
         checkInTransaction()
         newRootsPresent = true

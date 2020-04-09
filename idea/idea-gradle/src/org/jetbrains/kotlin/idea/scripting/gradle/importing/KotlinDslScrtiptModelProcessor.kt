@@ -137,6 +137,10 @@ fun saveScriptModels(
         errorReporter.reportError(File(model.file), model)
     }
 
-    project.service<GradleScriptingSupport>().replace(context, models)
+    project.service<GradleScriptInputsWatcher>().saveGradleProjectRootsAfterImport(
+        models.map { File(it.file).parent }.toSet()
+    )
+
+    GradleScriptingSupport.getInstance(project).replace(context, models)
     project.service<GradleScriptInputsWatcher>().clearState()
 }

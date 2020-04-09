@@ -13,8 +13,9 @@ import org.jetbrains.kotlin.idea.scripting.gradle.importing.KotlinDslScriptModel
 import java.io.DataInputStream
 import java.io.DataOutputStream
 
+// TODO fails if nothing saved
 object KotlinDslScriptModels {
-    private val attribute = FileAttribute("kotlin-script-dependencies", 1, false)
+    private val attribute = FileAttribute("kotlin-dsl-script-models", 1, false)
 
     fun read(project: Project): List<KotlinDslScriptModel>? {
         return attribute.readAttribute(project.projectFile ?: return null)?.use { readValue(it) }
@@ -79,10 +80,6 @@ private class StringsPool {
         val id = strings.size
         strings.add(string)
         id
-    }
-
-    fun addString(string: String) {
-        getStringId(string)
     }
 
     fun addStrings(list: List<String>) {

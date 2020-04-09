@@ -29,6 +29,8 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.util.io.URLUtil
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.idea.caches.project.getAllProjectSdks
+import org.jetbrains.kotlin.idea.core.script.configuration.CompositeManager
+import org.jetbrains.kotlin.idea.core.script.configuration.DefaultScriptingSupport
 import org.jetbrains.kotlin.idea.core.script.configuration.cache.ScriptConfigurationSnapshot
 import org.jetbrains.kotlin.idea.core.script.configuration.listener.ScriptConfigurationUpdater
 import org.jetbrains.kotlin.idea.core.script.configuration.loader.ScriptConfigurationLoader
@@ -160,12 +162,14 @@ interface ScriptConfigurationManager {
         @TestOnly
         fun updateScriptDependenciesSynchronously(file: PsiFile) {
             // TODO: review the usages of this method
-            (getInstance(file.project) as AbstractScriptConfigurationManager).updateScriptDependenciesSynchronously(file)
+            // TODO test method
+            //(getInstance(file.project) as CompositeManager).getRelated().updateScriptDependenciesSynchronously(file)
         }
 
         @TestOnly
         fun clearCaches(project: Project) {
-            (getInstance(project) as AbstractScriptConfigurationManager).clearCaches()
+            // TODO test method
+            //(getInstance(project) as AbstractScriptConfigurationManager).clearCaches()
         }
 
         fun clearManualConfigurationLoadingIfNeeded(file: VirtualFile) {

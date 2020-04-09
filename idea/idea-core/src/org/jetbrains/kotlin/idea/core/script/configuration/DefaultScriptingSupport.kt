@@ -27,10 +27,8 @@ import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.idea.core.script.*
 import org.jetbrains.kotlin.idea.core.script.configuration.cache.*
 import org.jetbrains.kotlin.idea.core.script.configuration.cache.ScriptConfigurationFileAttributeCache
-import org.jetbrains.kotlin.idea.core.script.configuration.listener.ScriptChangesNotifier
 import org.jetbrains.kotlin.idea.core.script.configuration.listener.ScriptConfigurationUpdater
 import org.jetbrains.kotlin.idea.core.script.configuration.loader.DefaultScriptConfigurationLoader
-import org.jetbrains.kotlin.idea.core.script.configuration.loader.ScriptConfigurationLoader
 import org.jetbrains.kotlin.idea.core.script.configuration.loader.ScriptConfigurationLoadingContext
 import org.jetbrains.kotlin.idea.core.script.configuration.loader.ScriptOutsiderFileConfigurationLoader
 import org.jetbrains.kotlin.idea.core.script.configuration.utils.*
@@ -38,12 +36,9 @@ import org.jetbrains.kotlin.idea.core.script.configuration.utils.ScriptClassRoot
 import org.jetbrains.kotlin.idea.core.script.settings.KotlinScriptingSettings
 import org.jetbrains.kotlin.idea.core.util.EDT
 import org.jetbrains.kotlin.psi.KtFile
-import org.jetbrains.kotlin.scripting.definitions.ScriptDefinition
 import org.jetbrains.kotlin.scripting.definitions.findScriptDefinition
-import org.jetbrains.kotlin.scripting.definitions.isNonScript
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
 import org.jetbrains.kotlin.scripting.resolve.ScriptReportSink
-import org.jetbrains.kotlin.utils.addToStdlib.firstNotNullResult
 import java.util.concurrent.locks.ReentrantLock
 import kotlin.concurrent.withLock
 import kotlin.script.experimental.api.ScriptDiagnostic

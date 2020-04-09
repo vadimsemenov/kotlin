@@ -6,16 +6,15 @@
 package org.jetbrains.kotlin.idea.core.script.configuration
 
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
+import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.Sdk
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.psi.PsiManager
 import com.intellij.psi.search.GlobalSearchScope
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import org.jetbrains.kotlin.idea.caches.project.getAllProjectSdks
 import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
 import org.jetbrains.kotlin.idea.core.script.ScriptDependenciesModificationTracker
 import org.jetbrains.kotlin.idea.core.script.configuration.listener.ScriptChangesNotifier
@@ -44,15 +43,22 @@ interface ScriptingSupport {
     fun getAllScriptDependenciesSourcesScope(): GlobalSearchScope
     fun getAllScriptsDependenciesClassFiles(): List<VirtualFile>
     fun getAllScriptDependenciesSources(): List<VirtualFile>
+
+    companion object {
+        val SCRIPTING_SUPPORT: ExtensionPointName<ScriptingSupport> =
+            ExtensionPointName.create("org.jetbrains.kotlin.scripting.idea.scriptingSupport")
+    }
 }
 
 class CompositeManager(val project: Project) : ScriptConfigurationManager {
+    @Suppress("unused")
     private val notifier = ScriptChangesNotifier(project, updater)
 
-    private val managers = mutableListOf<ScriptingSupport>()
+    private val managers = ScriptingSupport.SCRIPTING_SUPPORT.getPoint(project).extensionList
 
     private fun getRelatedManager(file: VirtualFile): ScriptingSupport = managers.first { it.isRelated(file) }
-    private fun getRelatedManager(file: KtFile): ScriptingSupport = getRelatedManager(file.originalFile.virtualFile)
+    private fun getRelatedManager(file: KtFile): ScriptingSupport =
+        getRelatedManager(file.originalFile.virtualFile)
 
     private fun getOrLoadConfiguration(
         virtualFile: VirtualFile,
