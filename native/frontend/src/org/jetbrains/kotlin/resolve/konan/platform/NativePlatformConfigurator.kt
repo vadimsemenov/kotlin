@@ -18,7 +18,6 @@ import org.jetbrains.kotlin.resolve.jvm.checkers.SuperCallWithDefaultArgumentsCh
 import org.jetbrains.kotlin.resolve.konan.diagnostics.NativeSharedImmutableChecker
 import org.jetbrains.kotlin.resolve.konan.diagnostics.NativeThrowsChecker
 import org.jetbrains.kotlin.resolve.konan.diagnostics.NativeTopLevelSingletonChecker
-import org.jetbrains.kotlin.resolve.scopes.synthetic.FunInterfaceConstructorsScopeProvider
 
 object NativePlatformConfigurator : PlatformConfiguratorBase(
     additionalCallCheckers = listOf(SuperCallWithDefaultArgumentsChecker()),
@@ -29,7 +28,6 @@ object NativePlatformConfigurator : PlatformConfiguratorBase(
 ) {
     override fun configureModuleComponents(container: StorageComponentContainer) {
         container.useInstance(NativeInliningRule)
-        container.useImpl<FunInterfaceConstructorsScopeProvider>()
     }
 
     override fun configureModuleDependentCheckers(container: StorageComponentContainer) {
