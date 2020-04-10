@@ -284,7 +284,7 @@ class GradleScriptDefinitionsContributor(private val project: Project) : ScriptD
                     GradleScriptDefinitionsContributor::class.java.name
                 )
             }
-            return ResolveResult.Failure(ScriptReport(failureMessage, ScriptReport.Severity.FATAL))
+           return ResolveResult.Failure(ScriptReport(failureMessage, ScriptReport.Severity.FATAL))
         }
     }
 }

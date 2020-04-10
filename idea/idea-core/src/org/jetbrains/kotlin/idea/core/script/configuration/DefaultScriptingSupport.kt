@@ -5,35 +5,28 @@
 
 package org.jetbrains.kotlin.idea.core.script.configuration
 
-import com.intellij.ProjectTopics
 import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.components.ServiceManager
-import com.intellij.openapi.extensions.Extensions
+import com.intellij.openapi.extensions.ExtensionPointName
 import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.project.Project
-import com.intellij.openapi.projectRoots.Sdk
-import com.intellij.openapi.roots.ModuleRootEvent
-import com.intellij.openapi.roots.ModuleRootListener
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiElementFinder
 import com.intellij.psi.PsiFile
 import com.intellij.psi.PsiManager
-import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.ui.EditorNotifications
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.idea.core.script.*
+import org.jetbrains.kotlin.idea.core.script.configuration.DefaultScriptConfigurationManagerExtensions.LOADER
 import org.jetbrains.kotlin.idea.core.script.configuration.cache.*
-import org.jetbrains.kotlin.idea.core.script.configuration.cache.ScriptConfigurationFileAttributeCache
 import org.jetbrains.kotlin.idea.core.script.configuration.listener.ScriptConfigurationUpdater
 import org.jetbrains.kotlin.idea.core.script.configuration.loader.DefaultScriptConfigurationLoader
 import org.jetbrains.kotlin.idea.core.script.configuration.loader.ScriptConfigurationLoader
 import org.jetbrains.kotlin.idea.core.script.configuration.loader.ScriptConfigurationLoadingContext
 import org.jetbrains.kotlin.idea.core.script.configuration.loader.ScriptOutsiderFileConfigurationLoader
 import org.jetbrains.kotlin.idea.core.script.configuration.utils.*
-import org.jetbrains.kotlin.idea.core.script.configuration.utils.ScriptClassRootsCache
 import org.jetbrains.kotlin.idea.core.script.settings.KotlinScriptingSettings
 import org.jetbrains.kotlin.idea.core.util.EDT
 import org.jetbrains.kotlin.psi.KtFile
@@ -46,14 +39,21 @@ import kotlin.concurrent.withLock
 import kotlin.script.experimental.api.ScriptDiagnostic
 
 class DefaultScriptingSupport(project: Project) : DefaultScriptingSupportBase(project) {
-    private val backgroundExecutor: BackgroundExecutor =
+    // TODO public for tests
+    val backgroundExecutor: BackgroundExecutor =
         if (ApplicationManager.getApplication().isUnitTestMode) TestingBackgroundExecutor(rootsIndexer)
         else DefaultBackgroundExecutor(project, rootsIndexer)
 
     private val outsiderLoader = ScriptOutsiderFileConfigurationLoader(project)
     private val fileAttributeCache = ScriptConfigurationFileAttributeCache(project)
     private val defaultLoader = DefaultScriptConfigurationLoader(project)
-    private val loaders = listOf(outsiderLoader, fileAttributeCache, defaultLoader)
+    private val loaders: Sequence<ScriptConfigurationLoader>
+        get() = sequence {
+            yield(outsiderLoader)
+            yield(fileAttributeCache)
+            yieldAll(LOADER.getPoint(project).extensionList)
+            yield(defaultLoader)
+        }
 
     private val saveLock = ReentrantLock()
 
@@ -146,6 +146,8 @@ class DefaultScriptingSupport(project: Project) : DefaultScriptingSupportBase(pr
 
             setLoadedConfiguration(file, newResult)
 
+            LoadScriptConfigurationNotificationFactory.hideNotification(file, project)
+
             val newConfiguration = newResult.configuration
             if (newConfiguration == null) {
                 saveReports(file, newResult.reports)
@@ -216,7 +218,7 @@ class DefaultScriptingSupport(project: Project) : DefaultScriptingSupportBase(pr
     }
 }
 
-abstract class DefaultScriptingSupportBase(val project: Project) : ScriptingSupport {
+abstract class DefaultScriptingSupportBase(val project: Project) : ScriptingSupport() {
     protected val rootsIndexer = ScriptClassRootsIndexer(project)
 
     @Suppress("LeakingThis")
@@ -312,20 +314,6 @@ abstract class DefaultScriptingSupportBase(val project: Project) : ScriptingSupp
         return upToDate
     }
 
-    @TestOnly
-    internal fun updateScriptDependenciesSynchronously(file: PsiFile) {
-        file.findScriptDefinition() ?: return
-
-        file as? KtFile ?: error("PsiFile $file should be a KtFile, otherwise script dependencies cannot be loaded")
-
-        val virtualFile = file.virtualFile
-        if (cache[virtualFile]?.isUpToDate(project, virtualFile, file) == true) return
-
-        rootsIndexer.transaction {
-            reloadOutOfDateConfiguration(file, forceSync = true, loadEvenWillNotBeApplied = true)
-        }
-    }
-
     protected open fun setAppliedConfiguration(
         file: VirtualFile,
         newConfigurationSnapshot: ScriptConfigurationSnapshot?
@@ -341,10 +329,12 @@ abstract class DefaultScriptingSupportBase(val project: Project) : ScriptingSupp
 
             cache.setApplied(file, newConfigurationSnapshot)
 
-            clearClassRootsCaches()
+            clearClassRootsCaches(project)
         }
 
-        updateHighlighting(listOf(file))
+        ScriptingSupportHelper.updateHighlighting(project) {
+            it == file
+        }
     }
 
     protected fun setLoadedConfiguration(
@@ -355,104 +345,40 @@ abstract class DefaultScriptingSupportBase(val project: Project) : ScriptingSupp
     }
 
     private fun hasNotCachedRoots(configuration: ScriptCompilationConfigurationWrapper): Boolean {
-        return classpathRoots.hasNotCachedRoots(configuration)
+        return classpathRoots.hasNotCachedRoots(DefaultClassRootsCache.extractRoots(project, configuration))
     }
 
-    init {
-        val connection = project.messageBus.connect(project)
-        connection.subscribe(ProjectTopics.PROJECT_ROOTS, object : ModuleRootListener {
-            override fun rootsChanged(event: ModuleRootEvent) {
-                clearClassRootsCaches()
-            }
-        })
+    @TestOnly
+    internal fun updateScriptDependenciesSynchronously(file: PsiFile) {
+        file.findScriptDefinition() ?: return
+
+        file as? KtFile ?: error("PsiFile $file should be a KtFile, otherwise script dependencies cannot be loaded")
+
+        val virtualFile = file.virtualFile
+        if (cache[virtualFile]?.isUpToDate(project, virtualFile, file) == true) return
+
+        rootsIndexer.transaction {
+            reloadOutOfDateConfiguration(file, forceSync = true, loadEvenWillNotBeApplied = true)
+        }
     }
 
     override fun clearCaches() {
         cache.clear()
     }
 
-    private fun updateHighlighting(files: List<VirtualFile>) {
-        if (files.isEmpty()) return
-
-        GlobalScope.launch(EDT(project)) {
-            if (project.isDisposed) return@launch
-
-            val openFiles = FileEditorManager.getInstance(project).openFiles
-            val openScripts = files.filter { it.isValid && openFiles.contains(it) }
-
-            openScripts.forEach {
-                PsiManager.getInstance(project).findFile(it)?.let { psiFile ->
-                    DaemonCodeAnalyzer.getInstance(project).restart(psiFile)
-                }
-            }
-        }
+    override fun recreateRootsCache(): ScriptClassRootsCache {
+        return DefaultClassRootsCache(
+            project,
+            cache.allApplied()
+        )
     }
-
-    ///////////////////
-    // ScriptRootsCache
-
-    private val classpathRootsLock = ReentrantLock()
-
-    @Volatile
-    private var _classpathRoots: ScriptClassRootsCache? = null
-    private val classpathRoots: ScriptClassRootsCache
-        get() {
-            val value1 = _classpathRoots
-            if (value1 != null) return value1
-
-            classpathRootsLock.withLock {
-                val value2 = _classpathRoots
-                if (value2 != null) return value2
-
-                val value3 = ScriptClassRootsCache(project, cache.allApplied())
-                _classpathRoots = value3
-                return value3
-            }
-        }
-
-    private fun clearClassRootsCaches() {
-        debug { "class roots caches cleared" }
-
-        classpathRootsLock.withLock {
-            _classpathRoots = null
-        }
-
-        val kotlinScriptDependenciesClassFinder =
-            Extensions.getArea(project).getExtensionPoint(PsiElementFinder.EP_NAME).extensions
-                .filterIsInstance<KotlinScriptDependenciesClassFinder>()
-                .single()
-
-        kotlinScriptDependenciesClassFinder.clearCache()
-
-        ScriptDependenciesModificationTracker.getInstance(project).incModificationCount()
-    }
-
-    /**
-     * Returns script classpath roots
-     * Loads script configuration if classpath roots don't contain [file] yet
-     */
-    private fun getActualClasspathRoots(file: VirtualFile): ScriptClassRootsCache {
-        if (classpathRoots.contains(file)) {
-            return classpathRoots
-        }
-
-        getOrLoadConfiguration(file)
-
-        return classpathRoots
-    }
-
-    override fun getScriptSdk(file: VirtualFile): Sdk? = getActualClasspathRoots(file).getScriptSdk(file)
-
-    override fun getFirstScriptsSdk(): Sdk? = classpathRoots.firstScriptSdk
-
-    override fun getScriptDependenciesClassFilesScope(file: VirtualFile): GlobalSearchScope =
-        getActualClasspathRoots(file).getScriptDependenciesClassFilesScope(file)
-
-    override fun getAllScriptsDependenciesClassFilesScope(): GlobalSearchScope = classpathRoots.allDependenciesClassFilesScope
-
-    override fun getAllScriptDependenciesSourcesScope(): GlobalSearchScope = classpathRoots.allDependenciesSourcesScope
-
-    override fun getAllScriptsDependenciesClassFiles(): List<VirtualFile> = classpathRoots.allDependenciesClassFiles
-
-    override fun getAllScriptDependenciesSources(): List<VirtualFile> = classpathRoots.allDependenciesSources
 }
+
+object DefaultScriptConfigurationManagerExtensions {
+    val LOADER: ExtensionPointName<ScriptConfigurationLoader> =
+        ExtensionPointName.create("org.jetbrains.kotlin.scripting.idea.loader")
+}
+
+val ScriptConfigurationManager.testingBackgroundExecutor
+    get() = (this as CompositeManager).managers.filterIsInstance<DefaultScriptingSupport>()
+        .first().backgroundExecutor as TestingBackgroundExecutor

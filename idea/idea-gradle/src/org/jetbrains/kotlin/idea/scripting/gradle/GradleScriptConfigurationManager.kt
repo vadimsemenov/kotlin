@@ -5,133 +5,79 @@
 
 package org.jetbrains.kotlin.idea.scripting.gradle
 
-import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer
 import com.intellij.openapi.application.ApplicationManager
 import com.intellij.openapi.externalSystem.util.ExternalSystemApiUtil
-import com.intellij.openapi.fileEditor.FileEditorManager
 import com.intellij.openapi.module.ModuleManager
 import com.intellij.openapi.project.Project
 import com.intellij.openapi.projectRoots.Sdk
 import com.intellij.openapi.roots.ModuleRootManager
-import com.intellij.openapi.roots.OrderRootType
 import com.intellij.openapi.util.io.FileUtil
-import com.intellij.openapi.vfs.StandardFileSystems
-import com.intellij.openapi.vfs.VfsUtil
 import com.intellij.openapi.vfs.VirtualFile
-import com.intellij.psi.PsiManager
 import com.intellij.psi.search.GlobalSearchScope
-import com.intellij.psi.search.NonClasspathDirectoriesScope
-import com.intellij.util.containers.SLRUMap
-import org.jetbrains.kotlin.codegen.inline.getOrPut
-import org.jetbrains.kotlin.idea.core.script.ScriptConfigurationManager
+import org.jetbrains.kotlin.idea.core.script.ScriptDefinitionsManager
 import org.jetbrains.kotlin.idea.core.script.configuration.ScriptingSupport
+import org.jetbrains.kotlin.idea.core.script.configuration.ScriptingSupportHelper
 import org.jetbrains.kotlin.idea.core.script.configuration.listener.ScriptConfigurationUpdater
+import org.jetbrains.kotlin.idea.core.script.configuration.utils.ScriptClassRootsCache
+import org.jetbrains.kotlin.idea.core.script.configuration.utils.ScriptClassRootsCache.Companion.isAlreadyIndexed
 import org.jetbrains.kotlin.idea.core.script.configuration.utils.ScriptClassRootsIndexer
+import org.jetbrains.kotlin.idea.core.script.configuration.utils.ScriptClassRootsStorage
 import org.jetbrains.kotlin.idea.scripting.gradle.importing.GradleKtsContext
 import org.jetbrains.kotlin.idea.scripting.gradle.importing.KotlinDslScriptModel
 import org.jetbrains.kotlin.idea.scripting.gradle.importing.toScriptConfiguration
-import org.jetbrains.kotlin.idea.util.getProjectJdkTableSafe
 import org.jetbrains.kotlin.psi.KtFile
+import org.jetbrains.kotlin.scripting.resolve.KotlinScriptDefinitionFromAnnotatedTemplate
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
 import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
+import org.jetbrains.plugins.gradle.settings.GradleExecutionSettings
 import org.jetbrains.plugins.gradle.settings.GradleProjectSettings
 import org.jetbrains.plugins.gradle.util.GradleConstants
 import java.io.File
-import java.nio.file.FileSystems
 
-private class Configuration(
+internal class Configuration(
     val context: GradleKtsContext,
     models: List<KotlinDslScriptModel>
 ) {
-    companion object {
-        const val MAX_SCRIPTS_CACHED = 50
-    }
-
-    class Fat(
-        val scriptConfiguration: ScriptCompilationConfigurationWrapper,
-        val classFilesScope: GlobalSearchScope
-    )
-
-    private val memoryCache = SLRUMap<VirtualFile, Fat>(MAX_SCRIPTS_CACHED, MAX_SCRIPTS_CACHED)
-
-    private fun String.toVirtualFile(): VirtualFile {
-        StandardFileSystems.local()?.findFileByPath(this)?.let {
-            return it
-        }
-
-        StandardFileSystems.jar()?.findFileByPath(this)?.let {
-            return it
-        }
-
-        // TODO: report this somewhere, but do not throw: assert(res != null, { "Invalid classpath entry '$this': exists: ${exists()}, is directory: $isDirectory, is file: $isFile" })
-
-        return VfsUtil.findFile(FileSystems.getDefault().getPath(this), true)!!
-    }
-
-    fun Collection<String>.toVirtualFiles() =
-        map { it.toVirtualFile() }
-
-    val sdk = findSdk()
-
-    private fun findSdk(): Sdk? {
-        val javaHome = try {
-            context.javaHome?.let { VfsUtil.findFileByIoFile(it, true) }
-        } catch (e: Throwable) {
-            null
-        }
-        return getProjectJdkTableSafe().allJdks.find { it.homeDirectory == javaHome }
-    }
-
     val scripts = models.associateBy { it.file }
-
-    val classFilePath = models.flatMapTo(mutableSetOf()) { it.classPath }
-    val classFiles = classFilePath.toVirtualFiles()
-    val classFilesScope = NonClasspathDirectoriesScope.compose(classFiles)
-
     val sourcePath = models.flatMapTo(mutableSetOf()) { it.sourcePath }
-    val sources = sourcePath.toVirtualFiles()
-    val sourcesScope = NonClasspathDirectoriesScope.compose(sources)
+
+    val classFilePath: MutableSet<String>
+
+    init {
+        while (!ScriptDefinitionsManager.getInstance(context.project).isReady()) {
+            Thread.sleep(100)
+        }
+        // TODO gradle classpath
+        val gradleDefinition = ScriptDefinitionsManager.getInstance(context.project).getAllDefinitions().find {
+            (it.asLegacyOrNull<KotlinScriptDefinitionFromAnnotatedTemplate>())?.scriptFilePattern?.pattern == ".*\\.gradle\\.kts"
+        }!! // todo exception
+        val result= hashSetOf<String>()
+        result.addAll(gradleDefinition.asLegacyOrNull<KotlinScriptDefinitionFromAnnotatedTemplate>()!!.templateClasspath.map { it.path })
+        models.flatMapTo(result) { it.classPath }
+        classFilePath = result
+    }
 
     fun scriptModel(file: VirtualFile): KotlinDslScriptModel? {
         return scripts[FileUtil.toSystemDependentName(file.path)]
     }
-
-    private fun Sdk.isAlreadyIndexed(): Boolean {
-        return ModuleManager.getInstance(context.project).modules.any { ModuleRootManager.getInstance(it).sdk == this }
-    }
-
-    operator fun get(key: VirtualFile): Fat? {
-        return memoryCache.getOrPut(key) {
-            val model = scriptModel(key) ?: return null
-            val configuration = model.toScriptConfiguration(context) ?: return null
-
-            val scriptSdk = sdk ?: ScriptConfigurationManager.getScriptDefaultSdk(context.project)
-            if (scriptSdk != null && !scriptSdk.isAlreadyIndexed()) {
-                return Fat(
-                    configuration,
-                    NonClasspathDirectoriesScope.compose(
-                        scriptSdk.rootProvider.getFiles(OrderRootType.CLASSES).toList() + model.classPath.toVirtualFiles()
-                    )
-                )
-
-            } else {
-                Fat(
-                    configuration,
-                    NonClasspathDirectoriesScope.compose(model.classPath.toVirtualFiles())
-                )
-            }
-        }
-    }
 }
 
-class GradleScriptingSupport(val project: Project) : ScriptingSupport {
+class GradleScriptingSupport(val project: Project) : ScriptingSupport() {
     @Volatile
     private var configuration: Configuration? = null
 
     private val rootsIndexer = ScriptClassRootsIndexer(project)
 
-    private fun Sdk.isAlreadyIndexed(): Boolean {
-        return ModuleManager.getInstance(project).modules.any { ModuleRootManager.getInstance(it).sdk == this }
+    override fun recreateRootsCache(): ScriptClassRootsCache {
+        val conf = configuration
+        return if (conf != null) {
+            GradleClassRootsCache(conf) {
+                val model = conf.scriptModel(it)
+                model?.toScriptConfiguration(conf.context)
+            }
+        } else {
+            EmptyClassRoots(project)
+        }
     }
 
     fun replace(context: GradleKtsContext, models: List<KotlinDslScriptModel>) {
@@ -139,28 +85,29 @@ class GradleScriptingSupport(val project: Project) : ScriptingSupport {
 
         val old = configuration
         val newConfiguration = Configuration(context, models)
+
         configuration = newConfiguration
 
+        configurationChangedCallback(old, newConfiguration)
+    }
+
+    private fun configurationChangedCallback(
+        old: Configuration?,
+        newConfiguration: Configuration
+    ) {
         rootsIndexer.transaction {
-            if (shouldReindex(old, newConfiguration)) {
+            if (classpathRoots.hasNotCachedRoots(GradleClassRootsCache.extractRoots(newConfiguration))) {
                 rootsIndexer.markNewRoot()
             }
-        }
 
+            clearClassRootsCaches(project)
 
-        ApplicationManager.getApplication().invokeLater {
-            val openFiles = FileEditorManager.getInstance(project).openFiles
-            val openScripts = openFiles.filter { configuration?.scriptModel(it) != null }
-
-            openScripts.forEach {
-                PsiManager.getInstance(project).findFile(it)?.let { psiFile ->
-                    DaemonCodeAnalyzer.getInstance(project).restart(psiFile)
-                }
+            ScriptingSupportHelper.updateHighlighting(project) {
+                configuration?.scriptModel(it) != null
             }
         }
 
-        // todo: update unindexed roots
-        // todo: remove notification, etc..
+        hideNotificationForProjectImport(project)
     }
 
     private fun shouldReindex(
@@ -168,7 +115,11 @@ class GradleScriptingSupport(val project: Project) : ScriptingSupport {
         new: Configuration
     ): Boolean {
         if (old == null) return true
-        if (new.sdk?.isAlreadyIndexed() == false) return true
+
+        if (classpathRoots.hasNotCachedRoots(GradleClassRootsCache.extractRoots(new))) return true
+
+        //todo
+        if (classpathRoots.firstScriptSdk?.isAlreadyIndexed(project) == false) return true
 
         if (!new.classFilePath.any { it !in old.classFilePath }) return true
         if (!new.sourcePath.any { it !in old.sourcePath }) return true
@@ -181,34 +132,30 @@ class GradleScriptingSupport(val project: Project) : ScriptingSupport {
             .getLinkedProjectsSettings()
             .filterIsInstance<GradleProjectSettings>().firstOrNull() ?: return
 
-        val javaHome = File(gradleProjectSettings.gradleJvm ?: return)
+        val gradleExeSettings = ExternalSystemApiUtil.getExecutionSettings<GradleExecutionSettings>(
+            project,
+            gradleProjectSettings.externalProjectPath,
+            GradleConstants.SYSTEM_ID
+        )
+        val javaHome = File(gradleExeSettings.gradleHome ?: return)
 
         val models = KotlinDslScriptModels.read(project) ?: return
-        configuration = Configuration(GradleKtsContext(project, javaHome), models)
+        val newConfiguration = Configuration(GradleKtsContext(project, javaHome), models)
+
+        configuration = newConfiguration
+
+        configurationChangedCallback(null, newConfiguration)
     }
 
     init {
+        //todo do not run for old gradle
+        // should be run after definitions are ready or save models with gradle jars
         ApplicationManager.getApplication().executeOnPooledThread {
+            while (!ScriptDefinitionsManager.getInstance(project).isReady()) {
+                Thread.sleep(100)
+            }
             load()
-
-            rootsIndexer.transaction {
-                rootsIndexer.markNewRoot()
-            }
-
-
-            ApplicationManager.getApplication().invokeLater {
-                val openFiles = FileEditorManager.getInstance(project).openFiles
-                val openScripts = openFiles.filter { configuration?.scriptModel(it) != null }
-
-                openScripts.forEach {
-                    PsiManager.getInstance(project).findFile(it)?.let { psiFile ->
-                        DaemonCodeAnalyzer.getInstance(project).restart(psiFile)
-                    }
-                }
-            }
         }
-        // todo: update unindexed roots
-        // todo: remove notification, etc..
     }
 
     fun updateNotification(file: KtFile) {
@@ -246,13 +193,9 @@ class GradleScriptingSupport(val project: Project) : ScriptingSupport {
             // todo: show notification "Import gradle project"
             return null
         } else {
-            return configuration[virtualFile]?.scriptConfiguration
+            return classpathRoots.getScriptConfiguration(virtualFile)
         }
     }
-
-    override fun getFirstScriptsSdk(): Sdk? = configuration?.sdk
-
-    override fun getScriptSdk(file: VirtualFile): Sdk? = configuration?.sdk
 
     override val updater: ScriptConfigurationUpdater
         get() = object : ScriptConfigurationUpdater {
@@ -268,24 +211,9 @@ class GradleScriptingSupport(val project: Project) : ScriptingSupport {
             }
         }
 
-    override fun getScriptDependenciesClassFilesScope(file: VirtualFile): GlobalSearchScope =
-        configuration?.get(file)?.classFilesScope ?: GlobalSearchScope.EMPTY_SCOPE
-
-    override fun getAllScriptsDependenciesClassFilesScope(): GlobalSearchScope =
-        configuration?.classFilesScope ?: GlobalSearchScope.EMPTY_SCOPE
-
-    override fun getAllScriptDependenciesSourcesScope(): GlobalSearchScope =
-        configuration?.sourcesScope ?: GlobalSearchScope.EMPTY_SCOPE
-
-    override fun getAllScriptsDependenciesClassFiles(): List<VirtualFile> =
-        configuration?.classFiles ?: listOf()
-
-    override fun getAllScriptDependenciesSources(): List<VirtualFile> =
-        configuration?.sources ?: listOf()
-
     companion object {
         fun getInstance(project: Project): GradleScriptingSupport {
-            return ScriptingSupport.SCRIPTING_SUPPORT.getPoint(project).extensionList.firstIsInstance()
+            return SCRIPTING_SUPPORT.getPoint(project).extensionList.firstIsInstance()
         }
     }
 }
