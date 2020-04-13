@@ -212,40 +212,36 @@ class KotlinConstraintSystemCompleter(
 
                 if (argument is LambdaWithTypeVariableAsExpectedTypeAtom) {
                     c as NewConstraintSystem
-                    if (argument.atom.parametersTypes != null) {
-                        val parameters = mutableListOf<KotlinType>()
+                    val parametersTypes = argument.atom.parametersTypes
+                    if (parametersTypes != null) {
 
-                        if (argument !in inTypes) {
-                            inTypes[argument] = mutableSetOf()
-                        }
-                        argument.atom.parametersTypes!!.forEach {
-                            if (it == null) {
-                                val tv = TypeVariableForLambdaReturnType(argument.atom, argument.expectedType.builtIns, "_I")
-                                c.getBuilder().registerVariable(tv)
-                                parameters.add(tv.defaultType)
-                                inTypes[argument]?.add(tv.freshTypeConstructor)
-                            } else {
-                                parameters.add(it)
+                        val parameters = parametersTypes.map {
+                            if (it != null) return@map it
+
+                            val tv = TypeVariableForLambdaInputType(argument.atom, argument.expectedType.builtIns, "_I").apply {
+                                c.getBuilder().registerVariable(this)
                             }
+                            argument.preparedParameterTypes.add(tv)
+                            tv.defaultType
                         }
 
-                        if (argument !in outTypes) {
-                            outTypes[argument] = mutableSetOf()
-                        }
-                        val tvr = TypeVariableForLambdaReturnType(argument.atom, argument.expectedType.builtIns, "_O")
-                        outTypes[argument]!!.add(tvr.freshTypeConstructor)
-                        c.getBuilder().registerVariable(tvr)
-                        val ft = createFunctionType(
+                        val preparedReturnType = TypeVariableForLambdaReturnType(argument.atom, argument.expectedType.builtIns, "_O")
+
+                        argument.preparedReturnType = preparedReturnType
+
+                        c.getBuilder().registerVariable(preparedReturnType)
+
+                        val functionType = createFunctionType(
                             argument.expectedType.builtIns,
                             Annotations.EMPTY,
                             null,
                             parameters,
                             null,
-                            tvr.defaultType
+                            preparedReturnType.defaultType
                         )
 
                         c.getBuilder().addSubtypeConstraint(
-                            ft,
+                            functionType,
                             argument.expectedType,
                             ArgumentConstraintPosition(argument.atom as KotlinCallArgument)
                         )
@@ -272,18 +268,14 @@ class KotlinConstraintSystemCompleter(
                         topLevelType
                     )
                     if (s != null) {
-                        val t = c.resolveLambdaByAdditionalConditions(
+                        val t = c.resolveLambdaOrCallableReferenceWithTypeVariableAsExpectedType(
                             s,
-                            postponedArguments,
+                            getOrderedNotAnalyzedPostponedArguments(topLevelAtoms),
                             diagnosticsHolder,
-                            analyze,
-                            variableFixationFinder,
-                            topLevelType
-                        ) { s, p ->
-                            analyze(s)
-                        }
+                            analyze
+                        )
                         isFixed = c.fixVariablesInsideFunctionTypeArguments(postponedArguments, topLevelAtoms, completionMode, topLevelType)
-                        if (!t.isNullOrEmpty()) continue
+                        if (t) continue
                     }
                 }
             } else {
@@ -338,33 +330,6 @@ class KotlinConstraintSystemCompleter(
             getOrderedNotAnalyzedPostponedArguments(topLevelAtoms).forEach(analyze)
 
             if (c.notFixedTypeVariables.isNotEmpty() && c.postponedTypeVariables.isEmpty()) {
-                outTypes.forEach { (d, h) ->
-                    val seen = mutableSetOf<TypeVariableTypeConstructor>()
-                    h.forEach {
-                        if (it in c.notFixedTypeVariables) {
-                            seen.add(it)
-                            fixVariable(c, c.notFixedTypeVariables[it]!!, topLevelAtoms)
-                        }
-                    }
-
-                    seen.forEach {
-                        outTypes[d]!!.remove(it)
-                    }
-                }
-
-                inTypes.forEach { (d, h) ->
-                    val seen2 = mutableSetOf<TypeVariableTypeConstructor>()
-                    h.forEach {
-                        if (it in c.notFixedTypeVariables) {
-                            seen2.add(it)
-                            fixVariable(c, c.notFixedTypeVariables[it]!!, topLevelAtoms)
-                        }
-                    }
-                    seen2.forEach {
-                        inTypes[d]?.remove(it)
-                    }
-                }
-
                 runCompletion(c, completionMode, topLevelAtoms, topLevelType, diagnosticsHolder, analyze)
             }
         }
@@ -373,109 +338,40 @@ class KotlinConstraintSystemCompleter(
     /*
      * returns true -> analyzed
      */
-    private fun Context.resolveLambdaByAdditionalConditions(
-        variableForFixation: VariableFixationFinder.VariableForFixation,
-        topLevelAtoms: List<ResolvedAtom>,
-        diagnosticsHolder: KotlinDiagnosticsHolder,
-        analyze: (PostponedResolvedAtom) -> Unit,
-        fixationFinder: VariableFixationFinder,
-        topLevelType: UnwrappedType,
-        callback: (PostponedResolvedAtom, PostponedResolvedAtom) -> Unit,
-    ): List<PostponedResolvedAtom>? {
-        val postponedArguments = getOrderedNotAnalyzedPostponedArguments(topLevelAtoms)
-
-        val f = resolveLambdaOrCallableReferenceWithTypeVariableAsExpectedType(
-            variableForFixation,
-            postponedArguments,
-            diagnosticsHolder,
-            analyze,
-            topLevelType,
-            callback
-        )
-
-        val s = resolveLambdaWhichIsReturnArgument(postponedArguments, diagnosticsHolder, analyze, fixationFinder, topLevelType, callback)
-
-        if (f == null) return s
-        if (s == null) return f
-
-        return s + f
-    }
-
-    /*
-     * returns true -> analyzed
-     */
-    private fun Context.resolveLambdaWhichIsReturnArgument(
-        postponedArguments: List<PostponedResolvedAtom>,
-        diagnosticsHolder: KotlinDiagnosticsHolder,
-        analyze: (PostponedResolvedAtom) -> Unit,
-        fixationFinder: VariableFixationFinder,
-        topLevelType: UnwrappedType,
-        callback: (PostponedResolvedAtom, PostponedResolvedAtom) -> Unit
-    ): List<PostponedResolvedAtom>? {
-        if (this !is NewConstraintSystem) return null
-
-        return postponedArguments.mapNotNull { postponedAtom ->
-            val isReturnArgumentOfAnotherLambda = postponedAtom is LambdaWithTypeVariableAsExpectedTypeAtom && postponedAtom.isReturnArgumentOfAnotherLambda
-
-            val atomExpectedType = postponedAtom.expectedType
-
-            val shouldAnalyzeByPresenceLambdaAsReturnArgument =
-                isReturnArgumentOfAnotherLambda && atomExpectedType != null &&
-                        with(fixationFinder) { variableHasTrivialOrNonProperConstraints(atomExpectedType.constructor) }
-
-            if (!shouldAnalyzeByPresenceLambdaAsReturnArgument)
-                return@mapNotNull null
-
-            val expectedTypeVariable =
-                atomExpectedType?.constructor?.takeIf { it in this.getBuilder().currentStorage().allTypeVariables } ?: return@mapNotNull null
-
-            val s = preparePostponedAtom(expectedTypeVariable.typeForTypeVariable(), postponedAtom, expectedTypeVariable.builtIns, diagnosticsHolder, topLevelType) ?: return null
-
-            callback(s, postponedAtom)
-
-            s
-        }
-    }
-
-    /*
-     * returns true -> analyzed
-     */
-    fun Context.resolveLambdaOrCallableReferenceWithTypeVariableAsExpectedType(
+    private fun Context.resolveLambdaOrCallableReferenceWithTypeVariableAsExpectedType(
         variableForFixation: VariableFixationFinder.VariableForFixation,
         postponedArguments: List<PostponedResolvedAtom>,
         diagnosticsHolder: KotlinDiagnosticsHolder,
-        analyze: (PostponedResolvedAtom) -> Unit,
-        topLevelType: UnwrappedType,
-        callback: (PostponedResolvedAtom, PostponedResolvedAtom) -> Unit
-    ): List<PostponedResolvedAtom>? {
-        if (this !is NewConstraintSystem) return null
+        analyze: (PostponedResolvedAtom) -> Unit
+    ): Boolean {
+        if (this !is NewConstraintSystem) return false
 
-        val variable = variableForFixation.variable as? TypeConstructor ?: return null
+        val variable = variableForFixation.variable as? TypeConstructor ?: return false
         val hasProperAtom = postponedArguments.any {
             when (it) {
-                is LambdaWithTypeVariableAsExpectedTypeAtom,
-                is PostponedCallableReferenceAtom -> it.expectedType?.constructor == variable
+                is LambdaWithTypeVariableAsExpectedTypeAtom, is PostponedCallableReferenceAtom ->
+                    it.expectedType?.constructor == variable
                 else -> false
             }
         }
 
-        return postponedArguments.mapNotNull { postponedAtom ->
+        return postponedArguments.all { postponedAtom ->
             val expectedTypeAtom = postponedAtom.expectedType
             val expectedTypeVariable =
-                expectedTypeAtom?.constructor?.takeIf { it in this.getBuilder().currentStorage().allTypeVariables } ?: variable
+                expectedTypeAtom?.constructor?.takeIf { it in getBuilder().currentStorage().allTypeVariables } ?: variable
 
             val shouldAnalyzeByEqualityExpectedTypeToVariable =
                 hasProperAtom || !variableForFixation.hasProperConstraint || variableForFixation.hasOnlyTrivialProperConstraint
 
             if (!shouldAnalyzeByEqualityExpectedTypeToVariable)
-                return@mapNotNull null
+                return@all false
 
-            val z = preparePostponedAtom(expectedTypeVariable.typeForTypeVariable(), postponedAtom, variable.builtIns, diagnosticsHolder, topLevelType)
-                ?: return@mapNotNull null
+            analyze(
+                preparePostponedAtom(expectedTypeVariable.typeForTypeVariable(), postponedAtom, variable.builtIns, diagnosticsHolder)
+                    ?: return@all false
+            )
 
-            callback(z, postponedAtom)
-
-            z
+            true
         }
     }
 
@@ -483,8 +379,7 @@ class KotlinConstraintSystemCompleter(
         expectedTypeVariable: UnwrappedType,
         postponedAtom: PostponedResolvedAtom,
         builtIns: KotlinBuiltIns,
-        diagnosticsHolder: KotlinDiagnosticsHolder,
-        topLevelType: UnwrappedType
+        diagnosticsHolder: KotlinDiagnosticsHolder
     ): PostponedResolvedAtom? {
         val csBuilder = (this as? NewConstraintSystem)?.getBuilder() ?: return null
 
@@ -498,9 +393,7 @@ class KotlinConstraintSystemCompleter(
                     CallableReferenceWithTypeVariableAsExpectedTypeAtom(postponedAtom.atom, expectedType, returnVariable).also {
                         postponedAtom.setAnalyzedResults(null, listOf(it))
                     }
-                },
-                topLevelType = topLevelType,
-                postponedAtom = postponedAtom
+                }
             )
             is LambdaWithTypeVariableAsExpectedTypeAtom -> postponedAtom.preparePostponedAtomWithTypeVariableAsExpectedType(
                 this, csBuilder, expectedTypeVariable.constructor,
@@ -509,9 +402,7 @@ class KotlinConstraintSystemCompleter(
                 typeVariableCreator = { TypeVariableForLambdaReturnType(postponedAtom.atom, builtIns, "_R") },
                 newAtomCreator = { returnVariable, expectedType ->
                     postponedAtom.transformToResolvedLambda(csBuilder, diagnosticsHolder, expectedType, returnVariable)
-                },
-                topLevelType = topLevelType,
-                postponedAtom = postponedAtom
+                }
             )
             else -> null
         }
@@ -524,9 +415,7 @@ class KotlinConstraintSystemCompleter(
         parameterTypes: Array<out KotlinType?>?,
         isSuitable: KotlinType.() -> Boolean,
         typeVariableCreator: () -> V,
-        newAtomCreator: (V, SimpleType) -> PostponedResolvedAtom,
-        topLevelType: UnwrappedType,
-        postponedAtom: PostponedResolvedAtom
+        newAtomCreator: (V, SimpleType) -> PostponedResolvedAtom
     ): PostponedResolvedAtom {
         if (variable !in c.notFixedTypeVariables) return this
 
@@ -535,10 +424,6 @@ class KotlinConstraintSystemCompleter(
             c.notFixedTypeVariables.getValue(variable),
             TypeVariableDirectionCalculator.ResolveDirection.TO_SUPERTYPE
         ) as KotlinType
-
-        if (functionalType.isSuitable()) {
-            c.fixVariablesInsideTypes(functionalType.arguments.dropLast(1).map { it.type }, listOf(postponedAtom), ConstraintSystemCompletionMode.FULL, topLevelType)
-        }
 
         val isExtensionFunction = functionalType.isExtensionFunctionType
         val isExtensionFunctionWithReceiverAsDeclaredParameter =
@@ -591,6 +476,7 @@ class KotlinConstraintSystemCompleter(
 
         fun ResolvedAtom.process(to: LinkedHashSet<TypeConstructor>) {
             val typeVariables = when (this) {
+                is LambdaWithTypeVariableAsExpectedTypeAtom -> preparedParameterTypes + preparedReturnType
                 is ResolvedCallAtom -> freshVariablesSubstitutor.freshVariables
                 is CallableReferenceWithTypeVariableAsExpectedTypeAtom -> mutableListOf<NewTypeVariable>().apply {
                     addIfNotNull(typeVariableForReturnType)
@@ -600,7 +486,8 @@ class KotlinConstraintSystemCompleter(
                 is ResolvedLambdaAtom -> listOfNotNull(typeVariableForLambdaReturnType)
                 else -> emptyList()
             }
-            typeVariables.mapNotNullTo(to) {
+
+            typeVariables.filterNotNull().mapNotNullTo(to) {
                 val typeConstructor = it.freshTypeConstructor
                 typeConstructor.takeIf { c.notFixedTypeVariables.containsKey(typeConstructor) }
             }

@@ -13,10 +13,7 @@ import org.jetbrains.kotlin.resolve.calls.components.TypeArgumentsToParametersMa
 import org.jetbrains.kotlin.resolve.calls.components.extractInputOutputTypesFromCallableReferenceExpectedType
 import org.jetbrains.kotlin.resolve.calls.inference.components.FreshVariableNewTypeSubstitutor
 import org.jetbrains.kotlin.resolve.calls.inference.components.NewTypeSubstitutor
-import org.jetbrains.kotlin.resolve.calls.inference.model.ConstraintStorage
-import org.jetbrains.kotlin.resolve.calls.inference.model.NewConstraintError
-import org.jetbrains.kotlin.resolve.calls.inference.model.TypeVariableForCallableReferenceReturnType
-import org.jetbrains.kotlin.resolve.calls.inference.model.TypeVariableForLambdaReturnType
+import org.jetbrains.kotlin.resolve.calls.inference.model.*
 import org.jetbrains.kotlin.resolve.calls.tasks.ExplicitReceiverKind
 import org.jetbrains.kotlin.resolve.constants.IntegerValueTypeConstant
 import org.jetbrains.kotlin.types.KotlinType
@@ -109,7 +106,9 @@ class LambdaWithTypeVariableAsExpectedTypeAtom(
 ) : PostponedResolvedAtom() {
     override val inputTypes: Collection<UnwrappedType> get() = listOf(expectedType)
     override val outputType: UnwrappedType? get() = null
-    var isReturnArgumentOfAnotherLambda: Boolean = false
+
+    val preparedParameterTypes = mutableListOf<TypeVariableForLambdaInputType>()
+    var preparedReturnType: TypeVariableForLambdaReturnType? = null
 
     fun setAnalyzed(resolvedLambdaAtom: ResolvedLambdaAtom) {
         setAnalyzedResults(listOf(resolvedLambdaAtom))
