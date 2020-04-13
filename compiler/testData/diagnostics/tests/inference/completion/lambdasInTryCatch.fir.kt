@@ -21,7 +21,7 @@ fun case2(x: Any){
         else -> try { 1 } catch (e: Exception) { {1 }} // type mismatch
     }
     when (x){
-        1 -> try { {"1"}; ""; TODO(); <!UNREACHABLE_CODE!>""<!>} catch (e: Exception) { { }} // ok
+        1 -> try { {"1"}; ""; TODO(); <!NI;UNREACHABLE_CODE!>""<!>} catch (e: Exception) { { }} // ok
         "1" -> try { 1 } catch (e: Exception) { { }} // ok
         else -> try { 1 } catch (e: Exception) { {1 }} // ok
     }
