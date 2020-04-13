@@ -3830,7 +3830,7 @@ public inline operator fun UShortArray.plus(elements: UShortArray): UShortArray 
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
 public fun UIntArray.sort(): Unit {
-    if (size > 1) sortArray(this)
+    if (size > 1) sortArray(this, 0, size)
 }
 
 /**
@@ -3841,7 +3841,7 @@ public fun UIntArray.sort(): Unit {
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
 public fun ULongArray.sort(): Unit {
-    if (size > 1) sortArray(this)
+    if (size > 1) sortArray(this, 0, size)
 }
 
 /**
@@ -3852,7 +3852,7 @@ public fun ULongArray.sort(): Unit {
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
 public fun UByteArray.sort(): Unit {
-    if (size > 1) sortArray(this)
+    if (size > 1) sortArray(this, 0, size)
 }
 
 /**
@@ -3863,7 +3863,7 @@ public fun UByteArray.sort(): Unit {
 @SinceKotlin("1.3")
 @ExperimentalUnsignedTypes
 public fun UShortArray.sort(): Unit {
-    if (size > 1) sortArray(this)
+    if (size > 1) sortArray(this, 0, size)
 }
 
 /**

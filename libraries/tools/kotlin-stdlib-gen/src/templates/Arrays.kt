@@ -1180,7 +1180,7 @@ object ArrayOps : TemplateGroupBase() {
         returns("Unit")
 
         body(ArraysOfUnsigned) {
-            """if (size > 1) sortArray(this)"""
+            """if (size > 1) sortArray(this, 0, size)"""
         }
 
         specialFor(ArraysOfPrimitives, ArraysOfObjects) {
