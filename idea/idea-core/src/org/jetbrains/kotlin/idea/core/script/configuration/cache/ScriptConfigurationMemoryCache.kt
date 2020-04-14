@@ -56,14 +56,4 @@ open class ScriptConfigurationMemoryCache(
         memoryCache.clear()
     }
 
-    @Synchronized
-    override fun markOutOfDate(file: VirtualFile) {
-        val old = memoryCache[file] ?: return
-        memoryCache.put(
-            file, old.copy(
-                applied = old.applied?.copy(inputs = CachedConfigurationInputs.OutOfDate),
-                loaded = old.loaded?.copy(inputs = CachedConfigurationInputs.OutOfDate)
-            )
-        )
-    }
 }

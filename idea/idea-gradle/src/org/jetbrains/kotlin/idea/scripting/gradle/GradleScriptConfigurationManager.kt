@@ -181,7 +181,8 @@ class GradleScriptingSupport(val project: Project) : ScriptingSupport() {
     }
 
     override fun clearCaches() {
-        configuration = null
+        // todo: should we drop configuration when script definitions changed?
+        //configuration = null
     }
 
     override fun hasCachedConfiguration(file: KtFile): Boolean =
