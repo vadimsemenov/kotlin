@@ -14,6 +14,7 @@ import com.intellij.psi.impl.source.codeStyle.lineIndent.FormatterBasedLineInden
 import com.intellij.psi.impl.source.codeStyle.lineIndent.JavaLikeLangLineIndentProvider
 import com.intellij.psi.tree.IElementType
 import org.apache.log4j.Logger
+import org.jetbrains.annotations.TestOnly
 import org.jetbrains.kotlin.KtNodeTypes
 import org.jetbrains.kotlin.idea.KotlinLanguage
 import org.jetbrains.kotlin.lexer.KtTokens
@@ -43,12 +44,16 @@ class KotlinLineIndentProvider : JavaLikeLangLineIndentProvider() {
             LOG.info("Java-like indent is empty...")
         }
 
-        return formatterBasedResult
+        return if (useFormatter) formatterBasedResult else result
     }
 
-    override fun mapType(tokenType: IElementType): SemanticEditorPosition.SyntaxElement? = SYNTAX_MAP[tokenType]
+    override fun mapType(tokenType: IElementType): SemanticEditorPosition.SyntaxElement? = null
 
     companion object {
+        @get:TestOnly
+        @set:TestOnly
+        internal var useFormatter: Boolean = false
+
         private val SYNTAX_MAP = linkedMapOf(
             KtTokens.WHITE_SPACE to JavaLikeElement.Whitespace,
             KtTokens.SEMICOLON to JavaLikeElement.Semicolon,
