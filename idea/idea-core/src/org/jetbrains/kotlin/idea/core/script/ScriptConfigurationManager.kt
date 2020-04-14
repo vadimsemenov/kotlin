@@ -39,6 +39,7 @@ import org.jetbrains.kotlin.psi.UserDataProperty
 import org.jetbrains.kotlin.scripting.definitions.ScriptDependenciesProvider
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationResult
 import org.jetbrains.kotlin.scripting.resolve.ScriptCompilationConfigurationWrapper
+import org.jetbrains.kotlin.utils.addToStdlib.firstIsInstance
 import java.io.File
 import kotlin.script.experimental.api.asSuccess
 import kotlin.script.experimental.api.makeFailureResult
@@ -162,14 +163,14 @@ interface ScriptConfigurationManager {
         @TestOnly
         fun updateScriptDependenciesSynchronously(file: PsiFile) {
             // TODO: review the usages of this method
-            // TODO test method
-            //(getInstance(file.project) as CompositeManager).getRelated().updateScriptDependenciesSynchronously(file)
+            (getInstance(file.project) as CompositeManager).managers.firstIsInstance<DefaultScriptingSupport>()
+                .updateScriptDependenciesSynchronously(file)
         }
 
         @TestOnly
         fun clearCaches(project: Project) {
-            // TODO test method
-            //(getInstance(project) as AbstractScriptConfigurationManager).clearCaches()
+            (getInstance(project) as CompositeManager).managers.firstIsInstance<DefaultScriptingSupport>()
+                .clearCaches()
         }
 
         fun clearManualConfigurationLoadingIfNeeded(file: VirtualFile) {
