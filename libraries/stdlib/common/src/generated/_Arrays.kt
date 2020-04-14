@@ -7698,6 +7698,72 @@ public expect fun CharArray.sort(): Unit
 public expect fun <T : Comparable<T>> Array<out T>.sort(): Unit
 
 /**
+ * Sorts a range in the array in-place.
+ * 
+ * The sort is _stable_. It means that equal elements preserve their order relative to each other after sorting.
+ * 
+ * @sample samples.collections.Arrays.Sorting.sortRangeOfArrayOfComparable
+ */
+@SinceKotlin("1.4")
+public expect fun <T : Comparable<T>> Array<out T>.sort(fromIndex: Int = 0, toIndex: Int = size): Unit
+
+/**
+ * Sorts a range in the array in-place.
+ * 
+ * @sample samples.collections.Arrays.Sorting.sortRangeOfArray
+ */
+@SinceKotlin("1.4")
+public expect fun ByteArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit
+
+/**
+ * Sorts a range in the array in-place.
+ * 
+ * @sample samples.collections.Arrays.Sorting.sortRangeOfArray
+ */
+@SinceKotlin("1.4")
+public expect fun ShortArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit
+
+/**
+ * Sorts a range in the array in-place.
+ * 
+ * @sample samples.collections.Arrays.Sorting.sortRangeOfArray
+ */
+@SinceKotlin("1.4")
+public expect fun IntArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit
+
+/**
+ * Sorts a range in the array in-place.
+ * 
+ * @sample samples.collections.Arrays.Sorting.sortRangeOfArray
+ */
+@SinceKotlin("1.4")
+public expect fun LongArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit
+
+/**
+ * Sorts a range in the array in-place.
+ * 
+ * @sample samples.collections.Arrays.Sorting.sortRangeOfArray
+ */
+@SinceKotlin("1.4")
+public expect fun FloatArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit
+
+/**
+ * Sorts a range in the array in-place.
+ * 
+ * @sample samples.collections.Arrays.Sorting.sortRangeOfArray
+ */
+@SinceKotlin("1.4")
+public expect fun DoubleArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit
+
+/**
+ * Sorts a range in the array in-place.
+ * 
+ * @sample samples.collections.Arrays.Sorting.sortRangeOfArray
+ */
+@SinceKotlin("1.4")
+public expect fun CharArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit
+
+/**
  * Sorts the array in-place according to the order specified by the given [comparator].
  * 
  * The sort is _stable_. It means that equal elements preserve their order relative to each other after sorting.

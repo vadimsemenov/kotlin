@@ -3867,6 +3867,46 @@ public fun UShortArray.sort(): Unit {
 }
 
 /**
+ * Sorts a range in the array in-place.
+ */
+@SinceKotlin("1.4")
+@ExperimentalUnsignedTypes
+public fun UIntArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
+    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+    sortArray(this, fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place.
+ */
+@SinceKotlin("1.4")
+@ExperimentalUnsignedTypes
+public fun ULongArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
+    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+    sortArray(this, fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place.
+ */
+@SinceKotlin("1.4")
+@ExperimentalUnsignedTypes
+public fun UByteArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
+    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+    sortArray(this, fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place.
+ */
+@SinceKotlin("1.4")
+@ExperimentalUnsignedTypes
+public fun UShortArray.sort(fromIndex: Int = 0, toIndex: Int = size): Unit {
+    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+    sortArray(this, fromIndex, toIndex)
+}
+
+/**
  * Returns an array of type [ByteArray], which is a copy of this array where each element is a signed reinterpretation
  * of the corresponding element of this array.
  */

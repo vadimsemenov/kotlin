@@ -1670,6 +1670,7 @@ public final class kotlin/collections/ArraysKt {
 	public static final fun sort ([III)V
 	public static final fun sort ([J)V
 	public static final fun sort ([JII)V
+	public static final fun sort ([Ljava/lang/Comparable;II)V
 	public static final fun sort ([Ljava/lang/Object;)V
 	public static final fun sort ([Ljava/lang/Object;II)V
 	public static final fun sort ([S)V
@@ -1680,6 +1681,7 @@ public final class kotlin/collections/ArraysKt {
 	public static synthetic fun sort$default ([FIIILjava/lang/Object;)V
 	public static synthetic fun sort$default ([IIIILjava/lang/Object;)V
 	public static synthetic fun sort$default ([JIIILjava/lang/Object;)V
+	public static synthetic fun sort$default ([Ljava/lang/Comparable;IIILjava/lang/Object;)V
 	public static synthetic fun sort$default ([Ljava/lang/Object;IIILjava/lang/Object;)V
 	public static synthetic fun sort$default ([SIIILjava/lang/Object;)V
 	public static final fun sortBy ([Ljava/lang/Object;Lkotlin/jvm/functions/Function1;)V

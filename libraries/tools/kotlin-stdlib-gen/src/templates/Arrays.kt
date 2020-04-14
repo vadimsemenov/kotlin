@@ -1291,11 +1291,24 @@ object ArrayOps : TemplateGroupBase() {
         }
     }
 
-    val f_sort_range = fn("sort(fromIndex: Int = 0, toIndex: Int = size)") {
+    val f_sort_range_jvm = fn("sort(fromIndex: Int = 0, toIndex: Int = size)") {
         platforms(Platform.JVM)
+        include(ArraysOfObjects)
+    } builder {
+        doc { "Sorts a range in the array in-place." }
+        appendStableSortNote()
+        sample("samples.collections.Arrays.Sorting.sortRangeOfArrayOfComparable")
+        returns("Unit")
+        body { "java.util.Arrays.sort(this, fromIndex, toIndex)" }
+    }
+
+    val f_sort_range = fn("sort(fromIndex: Int = 0, toIndex: Int = size)") {
         include(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
         exclude(PrimitiveType.Boolean)
     } builder {
+        on(Platform.Common) { since("1.4") }
+
+        typeParam("T : Comparable<T>")
         doc { "Sorts a range in the array in-place." }
         specialFor(ArraysOfObjects) {
             appendStableSortNote()
@@ -1305,16 +1318,61 @@ object ArrayOps : TemplateGroupBase() {
             sample("samples.collections.Arrays.Sorting.sortRangeOfArray")
         }
         returns("Unit")
-        body {
-            "java.util.Arrays.sort(this, fromIndex, toIndex)"
-        }
-        specialFor(ArraysOfUnsigned) {
+
+        if (f == ArraysOfUnsigned) {
             since("1.4")
             body {
                 """
                 AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
                 sortArray(this, fromIndex, toIndex)
                 """
+            }
+            return@builder
+        }
+
+        on(Platform.JVM) {
+            if (f == ArraysOfObjects) since("1.4")
+            suppress("ACTUAL_FUNCTION_WITH_DEFAULT_ARGUMENTS")
+            body {
+                "java.util.Arrays.sort(this, fromIndex, toIndex)"
+            }
+        }
+        on(Platform.Native) {
+            since("1.4")
+            suppress("ACTUAL_FUNCTION_WITH_DEFAULT_ARGUMENTS")
+            body {
+                """
+                AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+                sortArray(this, fromIndex, toIndex)
+                """
+            }
+        }
+        on(Platform.JS) {
+            since("1.4")
+            suppress("ACTUAL_FUNCTION_WITH_DEFAULT_ARGUMENTS")
+            body {
+                """
+                AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+                sortArray(this, fromIndex, toIndex)
+                """
+            }
+            specialFor(ArraysOfPrimitives) {
+                if (primitive != PrimitiveType.Long) {
+                    body {
+                        """
+                        AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+                        val subarray = this.asDynamic().subarray(fromIndex, toIndex).unsafeCast<SELF>()
+                        subarray.sort()
+                        """
+                    }
+                } else {
+                    body {
+                        """
+                        AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+                        sortArray(this.unsafeCast<Array<Long>>(), fromIndex, toIndex)
+                        """
+                    }
+                }
             }
         }
     }

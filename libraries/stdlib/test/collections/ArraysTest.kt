@@ -1754,6 +1754,46 @@ class ArraysTest {
         assertArrayNotSameButEquals(arrayOf("all", "Foo", "9", "80"), strArr)
     }
 
+    @Test fun sortRange() {
+
+        fun <TArray, T : Comparable<T>> doTest(
+            build: Iterable<Int>.() -> TArray,
+            sort: TArray.(fromIndex: Int, toIndex: Int) -> Unit,
+            snapshot: TArray.() -> List<T>
+        ) {
+            val arrays = (0..7).map { n -> n to (-2 until n - 2).shuffled().build() }
+            for ((size, array) in arrays) {
+                for (fromIndex in 0 until size) {
+                    for (toIndex in fromIndex..size) {
+                        val original = array.snapshot().toMutableList()
+                        array.sort(fromIndex, toIndex)
+                        val sorted = array.snapshot()
+                        assertEquals(original.apply { subList(fromIndex, toIndex).sort() }, sorted)
+                    }
+                }
+
+                assertFailsWith<IndexOutOfBoundsException> { array.sort(-1, size) }
+                assertFailsWith<IndexOutOfBoundsException> { array.sort(0, size + 1) }
+                assertFailsWith<IllegalArgumentException> { array.sort(0, -1) }
+            }
+        }
+
+        doTest(build = { map {it.toString()}.toTypedArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toString()}.toTypedArray() as Array<out String> }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+
+        doTest(build = { map {it}.toIntArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toLong()}.toLongArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toByte()}.toByteArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toShort()}.toShortArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toFloat()}.toFloatArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toDouble()}.toDoubleArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {'a' + it}.toCharArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toUInt()}.toUIntArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toULong()}.toULongArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toUByte()}.toUByteArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toUShort()}.toUShortArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
+    }
+
     @Test fun sortedTests() {
         assertTrue(arrayOf<Long>().sorted().none())
         assertEquals(listOf(1), arrayOf(1).sorted())
