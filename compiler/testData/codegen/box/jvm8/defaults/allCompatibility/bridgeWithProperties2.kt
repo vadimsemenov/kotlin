@@ -1,6 +1,7 @@
 // !JVM_DEFAULT_MODE: all-compatibility
 // IGNORE_BACKEND_FIR: JVM_IR
 // TARGET_BACKEND: JVM
+// IGNORE_BACKEND: ANDROID
 // FILE: Simple.java
 
 public interface Simple extends KInterface2 {
