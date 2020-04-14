@@ -16,6 +16,7 @@ import org.jetbrains.kotlin.idea.debugger.coroutine.coroutineDebuggerTraceEnable
 import org.jetbrains.kotlin.idea.debugger.coroutine.data.*
 import org.jetbrains.kotlin.idea.debugger.coroutine.proxy.mirror.DebugMetadata
 import org.jetbrains.kotlin.idea.debugger.coroutine.proxy.mirror.FieldVariable
+import org.jetbrains.kotlin.idea.debugger.coroutine.util.formatLocation
 import org.jetbrains.kotlin.idea.debugger.coroutine.util.logger
 import org.jetbrains.kotlin.idea.debugger.evaluate.DefaultExecutionContext
 import org.jetbrains.kotlin.idea.debugger.invokeInManagerThread
@@ -167,11 +168,6 @@ data class ContinuationHolder(val continuation: ObjectReference, val context: De
 
         private fun getThisContinuation(previousFrame: StackFrameProxyImpl?): ObjectReference? =
             previousFrame?.thisVariableValue()
-
-
-        private fun formatLocation(location: Location): String {
-            return "${location.method().name()}:${location.lineNumber()}, ${location.method().declaringType()} in ${location.sourceName()}"
-        }
 
         /**
          * Find continuation for the [frame]

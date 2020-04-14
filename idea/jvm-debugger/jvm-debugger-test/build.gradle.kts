@@ -43,6 +43,9 @@ dependencies {
 
     testRuntime(intellijDep())
     testRuntime(intellijRuntimeAnnotations())
+
+    testCompile("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.3.3") //gitignore
+    testCompile("org.jetbrains.kotlinx:kotlinx-coroutines-debug:1.3.3") //gitignore
 }
 
 sourceSets {

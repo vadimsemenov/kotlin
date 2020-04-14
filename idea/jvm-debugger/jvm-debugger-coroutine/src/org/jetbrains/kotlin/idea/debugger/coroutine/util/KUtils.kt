@@ -12,6 +12,7 @@ import com.intellij.psi.search.GlobalSearchScope
 import com.intellij.xdebugger.XDebuggerUtil
 import com.intellij.xdebugger.XSourcePosition
 import com.intellij.xdebugger.impl.XDebuggerManagerImpl
+import com.sun.jdi.Location
 import org.jetbrains.kotlin.idea.debugger.coroutine.proxy.ApplicationThreadExecutor
 
 fun getPosition(stackTraceElement: StackTraceElement, project: Project): XSourcePosition? {
@@ -34,4 +35,11 @@ fun getPosition(stackTraceElement: StackTraceElement, project: Project): XSource
 class ProjectNotification(val project: Project) {
     fun error(message: String) =
         XDebuggerManagerImpl.NOTIFICATION_GROUP.createNotification(message, MessageType.ERROR).notify(project)
+}
+
+fun formatLocation(location: Location?): String {
+    if (location != null)
+        return "${location.method().name()}:${location.lineNumber()}, ${location.method().declaringType()} in ${location.sourceName()}"
+    else
+        return "emptyLocation"
 }

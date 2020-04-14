@@ -1,0 +1,10 @@
+LineBreakpoint created at sequence.kt:16
+Run Java
+Connected to the target VM
+sequence.kt:16
+JavaFrame sequence.kt:15
+JavaFrame sequence.kt:16
+JavaFrame sequence.kt:-2
+Disconnected from the target VM
+
+Process finished with exit code 0
