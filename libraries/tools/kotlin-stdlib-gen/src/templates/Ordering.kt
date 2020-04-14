@@ -53,8 +53,7 @@ object Ordering : TemplateGroupBase() {
         }
     }
 
-    val f_reverse_range = fn("reverse(fromIndex: Int = 0, toIndex: Int = size)") {
-        platforms(Platform.JVM)
+    val f_reverse_range = fn("reverse(fromIndex: Int, toIndex: Int)") {
         include(InvariantArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
     } builder {
         since("1.4")

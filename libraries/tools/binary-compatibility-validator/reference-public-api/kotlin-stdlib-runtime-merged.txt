@@ -1564,15 +1564,6 @@ public final class kotlin/collections/ArraysKt {
 	public static final fun reverse ([SII)V
 	public static final fun reverse ([Z)V
 	public static final fun reverse ([ZII)V
-	public static synthetic fun reverse$default ([BIIILjava/lang/Object;)V
-	public static synthetic fun reverse$default ([CIIILjava/lang/Object;)V
-	public static synthetic fun reverse$default ([DIIILjava/lang/Object;)V
-	public static synthetic fun reverse$default ([FIIILjava/lang/Object;)V
-	public static synthetic fun reverse$default ([IIIILjava/lang/Object;)V
-	public static synthetic fun reverse$default ([JIIILjava/lang/Object;)V
-	public static synthetic fun reverse$default ([Ljava/lang/Object;IIILjava/lang/Object;)V
-	public static synthetic fun reverse$default ([SIIILjava/lang/Object;)V
-	public static synthetic fun reverse$default ([ZIIILjava/lang/Object;)V
 	public static final fun reversed ([B)Ljava/util/List;
 	public static final fun reversed ([C)Ljava/util/List;
 	public static final fun reversed ([D)Ljava/util/List;

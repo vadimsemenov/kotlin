@@ -62,48 +62,6 @@ class ArraysJVMTest {
     }
 
     @Test
-    fun reverseRangeInPlace() {
-
-        fun <TArray, T> doTest(
-            build: Iterable<Int>.() -> TArray,
-            reverse: TArray.(fromIndex: Int, toIndex: Int) -> Unit,
-            snapshot: TArray.() -> List<T>
-        ) {
-            val arrays = (0..7).map { n -> n to (0 until n).build() }
-            for ((size, array) in arrays) {
-                for (fromIndex in 0 until size) {
-                    for (toIndex in fromIndex until size) {
-                        val original = array.snapshot().toMutableList()
-                        array.reverse(fromIndex, toIndex)
-                        val reversed = array.snapshot()
-                        assertEquals(original.apply { subList(fromIndex, toIndex).reverse() }, reversed)
-                    }
-                }
-
-                assertFailsWith<IndexOutOfBoundsException> { array.reverse(-1, size) }
-                assertFailsWith<IndexOutOfBoundsException> { array.reverse(0, size + 1) }
-                assertFailsWith<IllegalArgumentException> { array.reverse(0, -1) }
-            }
-        }
-
-        doTest(build = { map {it.toString()}.toTypedArray() },  reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toString()}.toTypedArray() as Array<out String> },  reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-
-        doTest(build = { map {it}.toIntArray() },               reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toLong()}.toLongArray() },     reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toByte()}.toByteArray() },     reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toShort()}.toShortArray() },   reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toFloat()}.toFloatArray() },   reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toDouble()}.toDoubleArray() }, reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {'a' + it}.toCharArray() },        reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it % 2 == 0}.toBooleanArray() },  reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toUInt()}.toUIntArray() },     reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toULong()}.toULongArray() },   reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toUByte()}.toUByteArray() },   reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-        doTest(build = { map {it.toUShort()}.toUShortArray() }, reverse = { from, to -> reverse(from, to) }, snapshot = { toList() })
-    }
-
-    @Test
     fun sortDescendingRangeInPlace() {
 
         fun <TArray, T : Comparable<T>> doTest(
