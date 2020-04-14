@@ -110,23 +110,6 @@ class GradleScriptingSupport(val project: Project) : ScriptingSupport() {
         hideNotificationForProjectImport(project)
     }
 
-    private fun shouldReindex(
-        old: Configuration?,
-        new: Configuration
-    ): Boolean {
-        if (old == null) return true
-
-        if (classpathRoots.hasNotCachedRoots(GradleClassRootsCache.extractRoots(new))) return true
-
-        //todo
-        if (classpathRoots.firstScriptSdk?.isAlreadyIndexed(project) == false) return true
-
-        if (!new.classFilePath.any { it !in old.classFilePath }) return true
-        if (!new.sourcePath.any { it !in old.sourcePath }) return true
-
-        return false
-    }
-
     fun load() {
         val gradleProjectSettings = ExternalSystemApiUtil.getSettings(project, GradleConstants.SYSTEM_ID)
             .getLinkedProjectsSettings()
@@ -137,7 +120,7 @@ class GradleScriptingSupport(val project: Project) : ScriptingSupport() {
             gradleProjectSettings.externalProjectPath,
             GradleConstants.SYSTEM_ID
         )
-        val javaHome = File(gradleExeSettings.gradleHome ?: return)
+        val javaHome = File(gradleExeSettings.javaHome ?: return)
 
         val models = KotlinDslScriptModels.read(project) ?: return
         val newConfiguration = Configuration(GradleKtsContext(project, javaHome), models)
