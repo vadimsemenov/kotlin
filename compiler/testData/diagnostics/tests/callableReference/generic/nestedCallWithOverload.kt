@@ -7,6 +7,9 @@ fun <K> id(x: K): K = x
 fun <K> id1(x: K): K = x
 fun <L> id2(x: L): L = x
 fun <T> baz(x: T, y: T): T = TODO()
+fun <T> ba2(x: T, y: Inv<T>): T = TODO()
+
+class Inv<T>(x: T)
 
 fun test1() {
     val x1: (Int) -> Unit = id(id(::foo))
@@ -23,4 +26,6 @@ fun test1() {
     baz(id { <!DEBUG_INFO_EXPRESSION_TYPE("kotlin.Int")!>it<!>.inv() }, id<(Int) -> Unit> { })
     baz(id1 { x -> <!DEBUG_INFO_EXPRESSION_TYPE("kotlin.Int")!>x<!>.inv() }, id2 { x: Int -> })
     baz(id1 { <!DEBUG_INFO_EXPRESSION_TYPE("kotlin.Int")!>it<!>.inv() }, id2 { x: Int -> })
+
+    ba2(id1 { <!DEBUG_INFO_EXPRESSION_TYPE("kotlin.Int")!>it<!>.inv() }, id2(Inv { x: Int -> }))
 }
