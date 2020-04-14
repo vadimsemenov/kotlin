@@ -128,71 +128,8 @@ public fun <C : MutableCollection<in R>, R> Array<*>.filterIsInstanceTo(destinat
  * The sort is _stable_. It means that equal elements preserve their order relative to each other after sorting.
  */
 @SinceKotlin("1.4")
-public fun <T : Comparable<T>> Array<out T>.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
+public actual fun <T : Comparable<T>> Array<out T>.sortDescending(fromIndex: Int, toIndex: Int): Unit {
     sortWith(reverseOrder(), fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-public fun ByteArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-public fun ShortArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-public fun IntArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-public fun LongArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-public fun FloatArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-public fun DoubleArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-public fun CharArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
 }
 
 /**

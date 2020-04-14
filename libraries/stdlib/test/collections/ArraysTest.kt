@@ -1794,6 +1794,80 @@ class ArraysTest {
         doTest(build = { map {it.toUShort()}.toUShortArray() }, sort = { from, to -> sort(from, to) }, snapshot = { toList() })
     }
 
+    @Test
+    fun sortDescendingRangeInPlace() {
+
+        fun <TArray, T : Comparable<T>> doTest(
+            build: Iterable<Int>.() -> TArray,
+            sortDescending: TArray.(fromIndex: Int, toIndex: Int) -> Unit,
+            snapshot: TArray.() -> List<T>
+        ) {
+            val arrays = (0..7).map { n -> n to (-2 until n - 2).build() }
+            for ((size, array) in arrays) {
+                for (fromIndex in 0 until size) {
+                    for (toIndex in fromIndex..size) {
+                        val original = array.snapshot().toMutableList()
+                        array.sortDescending(fromIndex, toIndex)
+                        val reversed = array.snapshot()
+                        assertEquals(original.apply { subList(fromIndex, toIndex).sortDescending() }, reversed)
+                    }
+                }
+
+                assertFailsWith<IndexOutOfBoundsException> { array.sortDescending(-1, size) }
+                assertFailsWith<IndexOutOfBoundsException> { array.sortDescending(0, size + 1) }
+                assertFailsWith<IllegalArgumentException> { array.sortDescending(1, 0) }
+            }
+        }
+
+        doTest(build = { map {it.toString()}.toTypedArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toString()}.toTypedArray() as Array<out String> }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+
+        doTest(build = { map {it}.toIntArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toLong()}.toLongArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toByte()}.toByteArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toShort()}.toShortArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toFloat()}.toFloatArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toDouble()}.toDoubleArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {'a' + it}.toCharArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toUInt()}.toUIntArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toULong()}.toULongArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toUByte()}.toUByteArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+        doTest(build = { map {it.toUShort()}.toUShortArray() }, sortDescending = { from, to -> sortDescending(from, to) }, snapshot = { toList() })
+    }
+
+    @Test
+    fun sortDescendingRangeInPlace_Objects() {
+        data class Text(val data: String) : Comparable<Text> {
+            override fun compareTo(other: Text): Int = data.compareTo(other.data)
+        }
+
+        val first1 = Text("first")
+        val first2 = Text(first1.data)
+        val first3 = Text(first1.data)
+        val second1 = Text("second")
+        val second2 = Text(second1.data)
+        val third1 = Text("third")
+
+        assertEquals(first1, first2)
+        assertEquals(first1, first3)
+        assertNotSame(first1, first2)
+        assertNotSame(first1, first3)
+        assertNotSame(first2, first3)
+
+        assertEquals(second1, second2)
+        assertNotSame(second1, second2)
+
+        val original = arrayOf(first3, third1, second2, first2, first1, second1)
+        original.copyOf().apply { sortDescending(1, 5) }.forEachIndexed { i, e ->
+            assertSame(original[i], e)
+        }
+
+        val sorted = arrayOf(third1, second2, second1, first3, first2, first1)
+        original.apply { sortDescending(0, 6) }.forEachIndexed { i, e ->
+            assertSame(sorted[i], e)
+        }
+    }
+
     @Test fun sortedTests() {
         assertTrue(arrayOf<Long>().sorted().none())
         assertEquals(listOf(1), arrayOf(1).sorted())

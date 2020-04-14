@@ -66,46 +66,6 @@ public actual inline fun UShortArray.elementAt(index: Int): UShort {
 }
 
 /**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-@ExperimentalUnsignedTypes
-public fun UIntArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-@ExperimentalUnsignedTypes
-public fun ULongArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-@ExperimentalUnsignedTypes
-public fun UByteArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
- * Sorts a range in the array in-place descending according to their natural sort order.
- */
-@SinceKotlin("1.4")
-@ExperimentalUnsignedTypes
-public fun UShortArray.sortDescending(fromIndex: Int = 0, toIndex: Int = size): Unit {
-    sort(fromIndex, toIndex)
-    reverse(fromIndex, toIndex)
-}
-
-/**
  * Returns a [List] that wraps the original array.
  */
 @SinceKotlin("1.3")

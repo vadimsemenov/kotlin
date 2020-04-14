@@ -2791,6 +2791,46 @@ public fun UShortArray.sortDescending(): Unit {
 }
 
 /**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+@ExperimentalUnsignedTypes
+public fun UIntArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+@ExperimentalUnsignedTypes
+public fun ULongArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+@ExperimentalUnsignedTypes
+public fun UByteArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+@ExperimentalUnsignedTypes
+public fun UShortArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
  * Returns a list of all elements sorted according to their natural sort order.
  */
 @SinceKotlin("1.3")

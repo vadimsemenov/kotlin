@@ -5698,6 +5698,77 @@ public fun CharArray.sortDescending(): Unit {
 }
 
 /**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ * 
+ * The sort is _stable_. It means that equal elements preserve their order relative to each other after sorting.
+ */
+@SinceKotlin("1.4")
+public expect fun <T : Comparable<T>> Array<out T>.sortDescending(fromIndex: Int, toIndex: Int): Unit
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+public fun ByteArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+public fun ShortArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+public fun IntArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+public fun LongArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+public fun FloatArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+public fun DoubleArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
+ * Sorts a range in the array in-place descending according to their natural sort order.
+ */
+@SinceKotlin("1.4")
+public fun CharArray.sortDescending(fromIndex: Int, toIndex: Int): Unit {
+    sort(fromIndex, toIndex)
+    reverse(fromIndex, toIndex)
+}
+
+/**
  * Returns a list of all elements sorted according to their natural sort order.
  * 
  * The sort is _stable_. It means that equal elements preserve their order relative to each other after sorting.

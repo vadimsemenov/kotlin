@@ -1702,14 +1702,6 @@ public final class kotlin/collections/ArraysKt {
 	public static final fun sortDescending ([Ljava/lang/Comparable;II)V
 	public static final fun sortDescending ([S)V
 	public static final fun sortDescending ([SII)V
-	public static synthetic fun sortDescending$default ([BIIILjava/lang/Object;)V
-	public static synthetic fun sortDescending$default ([CIIILjava/lang/Object;)V
-	public static synthetic fun sortDescending$default ([DIIILjava/lang/Object;)V
-	public static synthetic fun sortDescending$default ([FIIILjava/lang/Object;)V
-	public static synthetic fun sortDescending$default ([IIIILjava/lang/Object;)V
-	public static synthetic fun sortDescending$default ([JIIILjava/lang/Object;)V
-	public static synthetic fun sortDescending$default ([Ljava/lang/Comparable;IIILjava/lang/Object;)V
-	public static synthetic fun sortDescending$default ([SIIILjava/lang/Object;)V
 	public static final fun sortWith ([Ljava/lang/Object;Ljava/util/Comparator;)V
 	public static final fun sortWith ([Ljava/lang/Object;Ljava/util/Comparator;II)V
 	public static synthetic fun sortWith$default ([Ljava/lang/Object;Ljava/util/Comparator;IIILjava/lang/Object;)V
@@ -2614,15 +2606,11 @@ public final class kotlin/collections/unsigned/UArraysKt {
 	public static final fun sort-rL5Bavg ([S)V
 	public static final fun sortDescending--ajY-9A ([I)V
 	public static final fun sortDescending--nroSd4 ([JII)V
-	public static synthetic fun sortDescending--nroSd4$default ([JIIILjava/lang/Object;)V
 	public static final fun sortDescending-4UcCI2c ([BII)V
-	public static synthetic fun sortDescending-4UcCI2c$default ([BIIILjava/lang/Object;)V
 	public static final fun sortDescending-Aa5vz7o ([SII)V
-	public static synthetic fun sortDescending-Aa5vz7o$default ([SIIILjava/lang/Object;)V
 	public static final fun sortDescending-GBYM_sE ([B)V
 	public static final fun sortDescending-QwZRm1k ([J)V
 	public static final fun sortDescending-oBK06Vg ([III)V
-	public static synthetic fun sortDescending-oBK06Vg$default ([IIIILjava/lang/Object;)V
 	public static final fun sortDescending-rL5Bavg ([S)V
 	public static final fun sorted--ajY-9A ([I)Ljava/util/List;
 	public static final fun sorted-GBYM_sE ([B)Ljava/util/List;

@@ -264,8 +264,7 @@ object Ordering : TemplateGroupBase() {
         }
     }
 
-    val f_sortDescending_range = fn("sortDescending(fromIndex: Int = 0, toIndex: Int = size)") {
-        platforms(Platform.JVM)
+    val f_sortDescending_range = fn("sortDescending(fromIndex: Int, toIndex: Int)") {
         include(ArraysOfObjects, ArraysOfPrimitives, ArraysOfUnsigned)
         exclude(PrimitiveType.Boolean)
     } builder {
@@ -277,6 +276,14 @@ object Ordering : TemplateGroupBase() {
         specialFor(ArraysOfObjects) {
             appendStableSortNote()
             body { """sortWith(reverseOrder(), fromIndex, toIndex)""" }
+            on(Platform.JS) {
+                body {
+                    """
+                    AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
+                    sortArrayWith(this, fromIndex, toIndex, reverseOrder())
+                    """
+                }
+            }
         }
         body(ArraysOfPrimitives, ArraysOfUnsigned) {
             """
