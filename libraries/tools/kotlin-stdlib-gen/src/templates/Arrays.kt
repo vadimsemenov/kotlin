@@ -1353,7 +1353,7 @@ object ArrayOps : TemplateGroupBase() {
             body {
                 """
                 AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
-                sortArray(this, fromIndex, toIndex)
+                sortArrayWith(this, fromIndex, toIndex, naturalOrder())
                 """
             }
             specialFor(ArraysOfPrimitives) {
@@ -1369,7 +1369,7 @@ object ArrayOps : TemplateGroupBase() {
                     body {
                         """
                         AbstractList.checkRangeIndexes(fromIndex, toIndex, size)
-                        sortArray(this.unsafeCast<Array<Long>>(), fromIndex, toIndex)
+                        sortArrayWith(this.unsafeCast<Array<Long>>(), fromIndex, toIndex, naturalOrder())
                         """
                     }
                 }

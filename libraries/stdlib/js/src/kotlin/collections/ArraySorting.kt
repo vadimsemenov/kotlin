@@ -37,12 +37,6 @@ internal fun <T : Comparable<T>> sortArray(array: Array<out T>) {
     }
 }
 
-internal fun <T : Comparable<T>> sortArray(array: Array<out T>, fromIndex: Int, toIndex: Int) {
-    if (fromIndex < toIndex - 1) {
-        mergeSort(array.unsafeCast<Array<T>>(), fromIndex, toIndex - 1, naturalOrder())
-    }
-}
-
 private var _stableSortingIsSupported: Boolean? = null
 private fun getStableSortingIsSupported(): Boolean {
     _stableSortingIsSupported?.let { return it }
